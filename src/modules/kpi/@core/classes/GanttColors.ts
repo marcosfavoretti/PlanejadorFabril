@@ -8,6 +8,6 @@ export class SetoresPalhetaDeCores{
         "00025": 'lightgreen',
         "00035": 'lightblue',
         "00050": 'pink',
-        "00055": 'darkgray'
+        "00020": 'darkgray'
     }
 }

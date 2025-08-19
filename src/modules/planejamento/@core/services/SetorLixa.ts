@@ -1,7 +1,7 @@
 import { Inject } from "@nestjs/common";
 import { SetorService } from "../abstract/SetorService";
 import { CODIGOSETOR } from "../enum/CodigoSetor.enum";
-import { IGerenciadorPlanejamentoMutation } from "../interfaces/IGerenciadorPlanejamento";
+import { IGerenciadorPlanejamentoMutation } from "../../../fabrica/@core/interfaces/IGerenciadorPlanejamento";
 import { ISyncProducao } from "../interfaces/ISyncProducao";
 import { ISyncProducaoFalha } from "../interfaces/ISyncProducaoFalha";
 import { MetodoDeAlocacao } from "../abstract/MetodoDeAlocacao";

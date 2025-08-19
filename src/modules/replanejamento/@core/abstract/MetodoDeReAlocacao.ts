@@ -1,9 +1,10 @@
 import { Calendario } from "src/modules/shared/@core/classes/Calendario";
-import { PlanejamentoDiario } from "../../../planejamento/@core/entities/PlanejamentoDiario.entity";
+import { IGerenciadorPlanejamentConsulta } from "src/modules/fabrica/@core/interfaces/IGerenciadorPlanejamentoConsulta";
+import { RealocacaoProps } from "src/modules/fabrica/@core/classes/RealocacaoProps";
+import { Fabrica } from "src/modules/fabrica/@core/entities/Fabrica.entity";
 import { CODIGOSETOR } from "src/modules/planejamento/@core/enum/CodigoSetor.enum";
-import { TabelaProducao } from "src/modules/producao-simulacao/@core/entities/TabelaProducao.entity";
-import { IGerenciadorPlanejamentConsulta } from "src/modules/planejamento/@core/interfaces/IGerenciadorPlanejamentoConsulta";
-import { PlanejamentoTemporario } from "src/modules/planejamento/@core/classes/PlanejamentoTemporario";
+import { IVerificaCapacidade } from "src/modules/fabrica/@core/interfaces/IVerificaCapacidade";
+import { RealocacaoParcial } from "src/modules/planejamento/@core/classes/RealocacaoParcial";
 
 export abstract class MetodoDeReAlocacao {
     protected calendario: Calendario = new Calendario();
@@ -12,41 +13,33 @@ export abstract class MetodoDeReAlocacao {
         protected gerenciadorPlan: IGerenciadorPlanejamentConsulta
     ) { }
 
-    protected abstract diasPossiveis(ponteiro: Date, producao: TabelaProducao): Promise<Date[]>;
-
     protected abstract realocacao(
-        producaoFalha: TabelaProducao,
+        fabrica: Fabrica,
         setor: CODIGOSETOR,
-        dias: Date[]
-    ): Promise<PlanejamentoTemporario[]>;
+        props: RealocacaoProps,
+        verificacao: IVerificaCapacidade,
+    ): Promise<RealocacaoParcial>;
 
     protected abstract realocacaoComDepedencia(
-        producaoFalha: TabelaProducao,
+        fabrica: Fabrica,
         setor: CODIGOSETOR,
-        dias: Date[],
-        proxSetorPlan: PlanejamentoDiario[]
-    ): Promise<PlanejamentoTemporario[]>;
+        props: RealocacaoProps,
+        verificacao: IVerificaCapacidade,
+        ultSetorPlan: RealocacaoParcial
+    ): Promise<RealocacaoParcial>;
 
     public async hookRealocacao(
-        diaVirtual: Date,
-        producaoFalha: TabelaProducao,
+        fabrica: Fabrica,
         setor: CODIGOSETOR,
-        planDoProximoSetor?: PlanejamentoDiario[]
-    ): Promise<PlanejamentoTemporario[]> {
-        const planejamentos: PlanejamentoTemporario[] = [];
-        if (planDoProximoSetor && planDoProximoSetor.length) { //caso tenha planejado do proximo setor e nao seja vazio
-            const dias = this.diasPossiveis(diaVirtual, producaoFalha);
-            // const realocacao = await this.realocacaoComDepedencia(producaoFalha, setor, )
+        props: RealocacaoProps,
+        verificacao: IVerificaCapacidade,
+        planDoUltimoSetor?: RealocacaoParcial
+    ): Promise<RealocacaoParcial> {
+        if (planDoUltimoSetor && (planDoUltimoSetor.adicionado.length || planDoUltimoSetor.retirado.length)) {
+            return await this.realocacaoComDepedencia(fabrica, setor, props, verificacao, planDoUltimoSetor);
         }
-        try {
-            const diasDoSetor = await this.diasPossiveis(
-                producaoFalha.date_planej,
-                producaoFalha
-            );
-            // return await this.realoacao(producaoFalha, setor, diasDoSetor, planDoProximoSetor);
-        } catch (error) {
-            throw new Error('nao foi possível alocar a carga');
+        else {
+            return await this.realocacao(fabrica, setor, props, verificacao);
         }
-        return []
     }
 }

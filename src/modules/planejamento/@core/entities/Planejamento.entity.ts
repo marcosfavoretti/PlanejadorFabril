@@ -1,28 +1,54 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, Column, OneToMany } from "typeorm";
-import { Item } from "./Item.entity";
-import { Pedido } from "./Pedido.entity";
-import { PlanejamentoDiario } from "./PlanejamentoDiario.entity";
-import { CODIGOSETOR } from "../enum/CodigoSetor.enum";
+import { Entity, PrimaryGeneratedColumn, ManyToOne, Column, OneToMany, JoinColumn, CreateDateColumn } from "typeorm";
+import { Pedido } from "../../../pedido/@core/entities/Pedido.entity";
+import { Setor } from "src/modules/setor/@core/entities/Setor.entity";
+import { PlanejamentoSnapShot } from "src/modules/fabrica/@core/entities/PlanejamentoSnapShot.entity";
+import { Item } from "src/modules/item/@core/entities/Item.entity";
 
 @Entity()
 export class Planejamento {
-    @PrimaryGeneratedColumn()
-    id: number;
+  @PrimaryGeneratedColumn()
+  planejamentoId: number;
 
-    @ManyToOne(() => Item, { eager: true })
-    item: Item;
+  @ManyToOne(() => Item, { eager: true })
+  @JoinColumn({ name: 'item' })
+  item: Item;
 
-    @Column("int")
-    qtd: number;
+  @ManyToOne(() => Setor, { eager: true })
+  @JoinColumn({ name: 'setor' })
+  setor: Setor;
 
-    @Column({
-        enum: CODIGOSETOR
-    })
-    setor: CODIGOSETOR;
+  @ManyToOne(() => Pedido, { eager: true })
+  @JoinColumn({ name: 'pedidoId' })
+  pedido: Pedido;
 
-    @ManyToOne(() => Pedido, { eager: true })
-    pedido: Pedido;
+  // @Column({
+  //   type: 'datetime',
+  //   transformer: {
+  //     to(value: Date): string {
+  //       const iso = value.toISOString();
+  //       return iso.split('.')[0]
+  //     },
+  //     from(value: string | null): Date {
+  //       return new Date(`${value}Z`)
+  //     },
+  //   },
+  // })
+  @CreateDateColumn()
+  dia: Date;
 
-    @ManyToOne(()=> PlanejamentoDiario, plan=> plan.planejamentos)
-    planejamentoDiario: PlanejamentoDiario;
+  @OneToMany(() => PlanejamentoSnapShot, plan => plan.planejamento, {onDelete: 'CASCADE'})
+  planejamentoSnapShot: PlanejamentoSnapShot[];
+
+  @Column('int')
+  qtd: number;
+
+  copy(): Planejamento {
+    const novo = new Planejamento();
+    novo.dia = this.dia;
+    novo.item = this.item;
+    novo.pedido = this.pedido;
+    novo.qtd = this.qtd;
+    novo.setor = this.setor;
+    return novo;
+  }
 }

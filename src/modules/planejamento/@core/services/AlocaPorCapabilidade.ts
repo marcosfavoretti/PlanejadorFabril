@@ -1,14 +1,41 @@
 import { MetodoDeAlocacao } from "../abstract/MetodoDeAlocacao";
-import type { Pedido } from "../entities/Pedido.entity";
 import { CODIGOSETOR } from "../enum/CodigoSetor.enum";
-import { Inject, Logger } from "@nestjs/common";
-import { IGerenciadorPlanejamentConsulta } from "../interfaces/IGerenciadorPlanejamentoConsulta";
+import { Inject } from "@nestjs/common";
+import { IGerenciadorPlanejamentConsulta } from "../../../fabrica/@core/interfaces/IGerenciadorPlanejamentoConsulta";
 import { PlanejamentoTemporario } from "../classes/PlanejamentoTemporario";
+import { Fabrica } from "src/modules/fabrica/@core/entities/Fabrica.entity";
+import { Pedido } from "src/modules/pedido/@core/entities/Pedido.entity";
+import { VerificaCapabilidade } from "src/modules/fabrica/@core/classes/VerificaCapabilidade";
+import { IVerificaCapacidade } from "src/modules/fabrica/@core/interfaces/IVerificaCapacidade";
+import { SetorService } from "../abstract/SetorService";
 
 export class AlocaPorCapabilidade extends MetodoDeAlocacao {
+
     constructor(
-        @Inject(IGerenciadorPlanejamentConsulta) gerenciador: IGerenciadorPlanejamentConsulta) {
+        @Inject(IGerenciadorPlanejamentConsulta) gerenciador: IGerenciadorPlanejamentConsulta,
+    ) {
         super(gerenciador);
+    }
+
+    verificacaoCapacidade(pedido: Pedido, codigoSetor: CODIGOSETOR): IVerificaCapacidade {
+        return new VerificaCapabilidade(pedido.item, codigoSetor);
+    }
+
+    protected async diasPossiveis(fabrica: Fabrica, pedido: Pedido, setor: CODIGOSETOR): Promise<Date[]> {
+        try {
+            const dias = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
+                fabrica,
+                pedido.getSafeDate(),
+                setor,
+                pedido.item,
+                pedido.lote,
+                new VerificaCapabilidade(pedido.item, setor)
+            );
+            return dias;
+        } catch (error) {
+            console.error(error);
+            throw new Error(`Problema a consultar as datas para adiantar a producao\n${error}`)
+        }
     }
 
     private sortStrategy(): (a, b) => number {
@@ -16,26 +43,20 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
     }
 
     protected async alocacaoComDependencia(
+        fabrica: Fabrica,
         pedido: Pedido,
         setor: CODIGOSETOR,
         planejamentoProximoSetor: PlanejamentoTemporario[]
     ): Promise<PlanejamentoTemporario[]> {
         const planejamentosTemporarios: PlanejamentoTemporario[] = [];
         const leadtime = pedido.getItem().getLeadtime(setor);
-        const planejamentosProxOrdenados = planejamentoProximoSetor
-            .sort(
-                this.sortStrategy()
-            );
+        const planejamentosProxOrdenados = planejamentoProximoSetor.sort(this.sortStrategy());
         let restante = pedido.getLote();
-        let jaAlocados: number = 0;
-
         for (const necessidade of planejamentosProxOrdenados) {
-            console.log(' CARA', necessidade)
             if (restante <= 0) break;
 
-            const precisoAlocar = necessidade.qtd//planejamentoProximoSetor.reduce((total, plan) => total += plan.qtd, 0);
-
-            console.log('nessa eu preciso alocas', precisoAlocar)
+            const precisoAlocar = necessidade.qtd;
+            //planejamentoProximoSetor.reduce((total, plan) => total += plan.qtd, 0);
 
             let dataLimite = leadtime > 0 ? this.calendario.ultimoDiaUtil(
                 this.calendario.subDays(necessidade.dia, leadtime),
@@ -43,13 +64,13 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
             ) : necessidade.dia;
 
             const datas = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
-                dataLimite, setor, pedido.item, precisoAlocar, planejamentosTemporarios
+                fabrica, dataLimite, setor, pedido.item, precisoAlocar, new VerificaCapabilidade(pedido.item, setor), planejamentosTemporarios
             );
 
             const qtdMatriz: number[] = [];
 
             for (const data of datas) {
-                const response = await this.gerenciadorPlan.possoAlocarQuantoNoDia(data, setor, pedido.item, planejamentosTemporarios);
+                const response = await this.gerenciadorPlan.possoAlocarQuantoNoDia(fabrica, data, setor, pedido.item, new VerificaCapabilidade(pedido.item, setor), planejamentosTemporarios);
                 qtdMatriz.push(response);
             }
 
@@ -58,7 +79,7 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
                 const qtdParaAlocar = Math.min(
                     restante,
                     possoAlocarNesseDia,
-                    pedido.item.produzaPc(setor)
+                    pedido.item.capabilidade(setor)
                 );
                 if (qtdParaAlocar <= 0) continue;
                 planejamentosTemporarios.push({
@@ -66,66 +87,64 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
                     item: pedido.item,
                     pedido,
                     qtd: qtdParaAlocar,
-                    setor,
+                    setor: setor,
                 });
                 restante -= qtdParaAlocar;
-                jaAlocados += qtdParaAlocar;
                 if (restante <= 0) break; // encerramento antecipado
             }
         }
         return planejamentosTemporarios;
     }
 
-    protected async alocacao(pedido: Pedido, setor: CODIGOSETOR, dias: Date[]): Promise<PlanejamentoTemporario[]> {
+    protected async alocacao(fabrica: Fabrica, pedido: Pedido, setor: CODIGOSETOR, dias: Date[]): Promise<PlanejamentoTemporario[]> {
         try {
             const planejamentosDoPedido: PlanejamentoTemporario[] = [];
             let restante = pedido.getLote();
-            dias.sort(this.sortStrategy());
             let i = 0;
             dias.sort((a, b) => b.getTime() - a.getTime());
             while (restante > 0 && i < dias.length) {
                 let dia = dias[i];
 
-                let capacidadeRestante = await this.gerenciadorPlan.possoAlocarQuantoNoDia(dia, setor, pedido.item, planejamentosDoPedido);
-                console.log(`restante em montagem dia ${dia}`, capacidadeRestante);
+                let capacidadeRestante = await this.gerenciadorPlan.possoAlocarQuantoNoDia(fabrica, dia, setor, pedido.item, new VerificaCapabilidade(pedido.item, setor), planejamentosDoPedido);
 
                 if (capacidadeRestante <= 0) {
-                    //linha abaixo pode gerar problemas
-                    const diasComEncaixe = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(dia, setor, pedido.item, restante, planejamentosDoPedido);
-                    dias.push(...diasComEncaixe.slice(1));//começa do segundo elemento pq o outro ja vai ser atributo na interacao atual
-                    dia = diasComEncaixe[0];
-                    capacidadeRestante = await this.gerenciadorPlan.possoAlocarQuantoNoDia(dia, setor, pedido.item, planejamentosDoPedido);
+                    const [primeiroDiaComEncaixe, ...outrosDiasComEncaixe] = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(fabrica, dia, setor, pedido.item, restante, new VerificaCapabilidade(pedido.item, setor), planejamentosDoPedido);
+                    dias.push(...outrosDiasComEncaixe);
+                    dia = primeiroDiaComEncaixe;
+                    capacidadeRestante = await this.gerenciadorPlan.possoAlocarQuantoNoDia(fabrica, dia, setor, pedido.item, new VerificaCapabilidade(pedido.item, setor), planejamentosDoPedido);
                 }
 
                 const quantidadeParaAlocar = Math.min(restante, capacidadeRestante);
-                planejamentosDoPedido.push(
-                    {
-                        dia: dia,
-                        item: pedido.item,
-                        pedido: pedido,
-                        qtd: quantidadeParaAlocar,
-                        setor: setor
-                    }
-                );
+
+                planejamentosDoPedido.push({
+                    dia: dia,
+                    item: pedido.item,
+                    pedido: pedido,
+                    qtd: quantidadeParaAlocar,
+                    setor: setor
+                });
+
                 restante -= quantidadeParaAlocar;
+
                 if (restante > 0 && i === dias.length - 1) {
                     const [novaData] = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
+                        fabrica,
                         this.calendario.subDays(dia, 1),
                         setor,
                         pedido.item,
                         restante,
+                        new VerificaCapabilidade(pedido.item, setor),
                         planejamentosDoPedido
                     );
                     dias.push(novaData);
                 }
                 i++;
             }
-            console.log("terminei alocao")
-            console.log(planejamentosDoPedido)
+            console.log('terminei alocacao')
             return planejamentosDoPedido;
         } catch (error) {
             console.error(error);
-            throw new Error(`Erro ao alocar carga do pedido ${pedido.getCodigo()}`);
+            throw new Error(`Erro ao alocar carga do pedido ${pedido.codigo}`);
         }
     }
-} 
+}  

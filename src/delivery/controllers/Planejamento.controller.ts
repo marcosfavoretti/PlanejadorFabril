@@ -1,15 +1,12 @@
-import { Controller, Get, Inject, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Post, Query } from "@nestjs/common";
 import { ApiOkResponse, ApiResponse } from "@nestjs/swagger";
-import { ConsultarDatasPlanejadasUseCase } from "src/modules/planejamento/application/ConsultarDatasPlanejadas.usecase";
-import { PlanejamentoUseCase } from "src/modules/planejamento/application/Planejamento.usecase";
+import { ConsultarDatasPlanejadasUseCase } from "src/modules/fabrica/application/ConsultarDatasPlanejadas.usecase";
+import { ConsultartPedidoUseCase } from "src/modules/fabrica/application/ConsultarPedido.usecase";
+import { PlanejarPedidoDTO } from "../dtos/PlanejarPedido.dto";
 
 @Controller('plan')
 export class PlanejamentoController {
-    @Inject(PlanejamentoUseCase) private planejamentoUseCase: PlanejamentoUseCase;
-    @Post('/')
-    async planejamentoMethod(): Promise<void> {
-        return this.planejamentoUseCase.planeje();
-    }
+    
 
     @Inject(ConsultarDatasPlanejadasUseCase) private consultarDatasPlanejadasUseCase: ConsultarDatasPlanejadasUseCase
     @Get('datas')
@@ -25,5 +22,14 @@ export class PlanejamentoController {
     })
     async datasPlanejadasMethod(): Promise<Date[]> {
         return await this.consultarDatasPlanejadasUseCase.consultar();
+    }
+
+   
+    @ApiResponse({ status: 400, description: 'Parâmetros inválidos' })
+    async consultarPedido(
+        @Query('pedidoId') pedidoId: number,
+        @Query('fabricaId') fabricaId: string,
+    ): Promise<any> {
+        // return this.consultaPedidoUsecase.consultar({ pedidoId, fabricaId });
     }
 }

@@ -1,13 +1,13 @@
-import { Item } from "../entities/Item.entity";
-import { CODIGOSETOR } from "../enum/CodigoSetor.enum";
+import { Setor } from "src/modules/setor/@core/entities/Setor.entity";
+import { Item } from "../../../item/@core/entities/Item.entity";
 
 export class Mercado {
     private estoque: Map<string, number>;
-    constructor(private setor: CODIGOSETOR, estoque?: Map<string, number>) {
+    constructor(private setor: Setor, estoque?: Map<string, number>) {
         estoque ? this.estoque = estoque : this.estoque = new Map();
     }
 
-    getSetor(): CODIGOSETOR {
+    getSetor(): Setor {
         return this.setor;
     }
 

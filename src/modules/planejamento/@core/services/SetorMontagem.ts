@@ -5,7 +5,7 @@ import { ISyncProducao } from "../interfaces/ISyncProducao";
 import { ISyncProducaoFalha } from "../interfaces/ISyncProducaoFalha";
 import { MetodoDeAlocacao } from "../abstract/MetodoDeAlocacao";
 import { MetodoDeReAlocacao } from "src/modules/replanejamento/@core/abstract/MetodoDeReAlocacao";
-import { IGerenciadorPlanejamentoMutation } from "../interfaces/IGerenciadorPlanejamento";
+import { IGerenciadorPlanejamentoMutation } from "../../../fabrica/@core/interfaces/IGerenciadorPlanejamento";
 
 
 export class SetorMontagem extends SetorService {

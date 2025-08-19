@@ -1,13 +1,14 @@
 import { Module } from "@nestjs/common";
-import { VirtualDateService } from "../producao-simulacao/infra/services/VirtualDate.service";
+import { VirtualDateService } from "../fabrica/infra/service/VirtualDate.service";
 import { ReplanejamentoUseCase } from "./application/Replanejamento.usecase";
-import { VirtualDateRepository } from "../producao-simulacao/infra/repositories/VirtualDate.repository";
 import { FabricaModule } from "../fabrica/Fabrica.module";
+import { VirtualDateRepository } from "../fabrica/infra/repository/VirtualDate.repository";
+import { FabricaServiceModule } from "../fabrica/FabricaService.module";
 
 
 @Module({
     imports: [
-        FabricaModule
+        FabricaServiceModule
     ],
     providers: [
         VirtualDateService,

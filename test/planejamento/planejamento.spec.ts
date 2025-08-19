@@ -1,6 +1,6 @@
 import { Fabrica } from "src/modules/planejamento/@core/entities/Fabrica"
-import { GerenciadorPlanejamento } from "src/modules/planejamento/@core/entities/GerenciadorPlanejamento"
-import { FabricaService } from "src/modules/planejamento/@core/services/Fabrica.service"
+import { GerenciadorPlanejamento } from "src/modules/fabrica/infra/service/GerenciadorPlanejamento"
+import { FabricaService } from "src/modules/fabrica/infra/service/FabricaSimulacao.service"
 import { PedidosMemoRepo } from "src/modules/planejamento/infra/PedidosMemo.repo"
 
 describe('teste da funcao de planejamento', () => {

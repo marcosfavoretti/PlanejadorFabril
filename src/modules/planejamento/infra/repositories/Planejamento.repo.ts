@@ -1,6 +1,6 @@
 import { DataSource, Repository } from "typeorm";
-import { Planejamento } from "../../@core/entities/Planejamento.entity";
 import { InjectDataSource } from "@nestjs/typeorm";
+import { Planejamento } from "src/modules/planejamento/@core/entities/Planejamento.entity";
 
 export class PlanejamentoRepository extends Repository<Planejamento>{
     constructor(

@@ -5,11 +5,11 @@ import { CODIGOSETOR } from "src/modules/planejamento/@core/enum/CodigoSetor.enu
 export class GetTabelaProducaoDiarioDTO {
     @ApiProperty()
     @IsNumber()
-    id: number;
+    tabelaProducaoId: number;
 
     @ApiProperty()
     @IsDate()
-    date_planej: Date;
+    datePlanej: Date;
 
 
     @ApiProperty()

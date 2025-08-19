@@ -3,6 +3,10 @@
     "module": "commonjs",
     "declaration": true,
     "removeComments": true,
+    "paths": {
+      "@sql/*": ["src/modules/@files/*"],
+      "@files/*": ["src/modules/@sql/*"]
+    },
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,

@@ -1,8 +1,8 @@
 import { Body, Controller, Get, HttpStatus, Inject, Post, Query } from "@nestjs/common";
-import { ConsultaTabelaDiariaUseCase } from "src/modules/producao-simulacao/application/ConsultaTabelaDiaria.usecase";
+import { ConsultaTabelaDiariaUseCase } from "src/modules/planejamento/application/ConsultaTabelaDiaria.usecase";
 import { ApiQuery, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { GetTabelaProducaoDiarioDTO } from "../dtos/GetTabelaProducaoDiario.dto";
-import { SaveTabelaDiarioUseCase } from "src/modules/producao-simulacao/application/SaveTabelaDiario.usecase";
+import { SaveTabelaDiarioUseCase } from "src/modules/planejamento/application/SaveTabelaDiario.usecase";
 import { SalvarTabelaProducaoDiarioDTO } from "../dtos/SalvarTabelaProucaoDiario.dto";
 import { GetGanttInformationDto } from "../dtos/GetGanttInformation.dto";
 import { ConsultarMercadoUseCase } from "src/modules/kpi/application/ConsultarMercado.usecase";
@@ -31,14 +31,6 @@ export class ProducaoSimulacaoController {
     @Get('gen/mercado')
     async consultarMercadoMethod(): Promise<GetMercadosEntreSetoresTabelaDto[]> {
         return this.consultarMercadoUseCase.consultar()
-    }
-
-    @Inject(ConsultarGraficoGanttUseCase) private consultarGraficoGanttUseCase: ConsultarGraficoGanttUseCase;
-    @Get('/gen/gannt')
-    @ApiOperation({ summary: 'Gera informações para o gráfico' })
-    @ApiResponse({ status: 200, description: 'Tabela de produção gerada com sucesso', type: () => GetGanttInformationDto, isArray: true })
-    async getGanttInformationMethod(): Promise<GetGanttInformationDto[]> {
-        return await this.consultarGraficoGanttUseCase.consultar();
     }
 
     @Inject(SaveTabelaDiarioUseCase) private saveTabela: SaveTabelaDiarioUseCase;

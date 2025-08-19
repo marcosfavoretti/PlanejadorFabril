@@ -2,7 +2,7 @@ import { Inject } from "@nestjs/common";
 import { retry } from "rxjs";
 import { GetMercadosEntreSetoresTabelaDto } from "src/delivery/dtos/GetMercadosEntreSetores.dto";
 import { Mercado } from "src/modules/planejamento/@core/classes/Mercado";
-import { TabelaProducaoService } from "src/modules/producao-simulacao/infra/services/TabelaProducao.service";
+import { TabelaProducaoService } from "src/modules/planejamento/infra/services/TabelaProducao.service";
 
 export class LinkMercadoComProdService {
     @Inject(TabelaProducaoService) private tabelaProducaoService: TabelaProducaoService
@@ -21,16 +21,16 @@ export class LinkMercadoComProdService {
                     response.push({
                         dia: dia,
                         item: partcode,
-                        operacao: mercado.getSetor(),
+                        operacao: mercado.getSetor().codigo,
                         planejado: tabelaProducao.find(
-                            t => t.date_planej.getTime() === dia.getTime() &&
+                            t => t.datePlanej.getTime() === dia.getTime() &&
                                 t.planejamento.item.getCodigo() === partcode &&
-                                t.planejamento.setor === mercado.getSetor()
+                                t.planejamento.setor.codigo === mercado.getSetor().codigo
                         )?.planejamento.qtd || 0,
                         produzido: tabelaProducao.find(
-                            t => t.date_planej.getTime() === dia.getTime() &&
+                            t => t.datePlanej.getTime() === dia.getTime() &&
                                 t.planejamento.item.getCodigo() === partcode &&
-                                t.planejamento.setor === mercado.getSetor()
+                                t.planejamento.setor.codigo === mercado.getSetor().codigo
                         )?.produzido || 0,
                         qtdmercado: qtd
                     })

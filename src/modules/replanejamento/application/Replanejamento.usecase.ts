@@ -1,6 +1,6 @@
 import { Inject, InternalServerErrorException } from "@nestjs/common";
-import { FabricaService } from "src/modules/planejamento/@core/services/Fabrica.service";
-import { VirtualDateService } from "src/modules/producao-simulacao/infra/services/VirtualDate.service";
+import { FabricaService } from "src/modules/fabrica/infra/service/Fabrica.service";
+import { VirtualDateService } from "src/modules/fabrica/infra/service/VirtualDate.service";
 
 export class ReplanejamentoUseCase {
     constructor(
@@ -10,7 +10,7 @@ export class ReplanejamentoUseCase {
 
     async replanejamento(): Promise<void> {
         try {
-            await this.fabricaService.replanejamento();
+            // await this.fabricaService.replanejamento();
             // await this.virtualDateService.praFrente();
         } catch (error) {
             throw new InternalServerErrorException(error.message)

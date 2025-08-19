@@ -5,5 +5,5 @@ export enum CODIGOSETOR{
     'MONTAGEM' = '00025',
     'LIXA' = '00017',
     'DOBRA' = '00011',
-    'PINTURAPO' = '00055', 
+    'PINTURAPO' = '00020', 
 }

@@ -1,19 +1,19 @@
 import { Inject } from "@nestjs/common";
 import { Mercado } from "../classes/Mercado";
-import { CODIGOSETOR } from "../enum/CodigoSetor.enum";
-import { TabelaProducaoService } from "src/modules/producao-simulacao/infra/services/TabelaProducao.service";
+import { TabelaProducaoService } from "src/modules/planejamento/infra/services/TabelaProducao.service";
 import { ISyncProducao } from "../interfaces/ISyncProducao";
 import { ISyncProducaoFalha } from "../interfaces/ISyncProducaoFalha";
-import { TabelaProducao } from "src/modules/producao-simulacao/@core/entities/TabelaProducao.entity";
+import { Setor } from "src/modules/setor/@core/entities/Setor.entity";
+import { TabelaProducao } from "src/modules/planejamento/@core/entities/TabelaProducao.entity";
 
 export class SyncMercadoManual implements ISyncProducao, ISyncProducaoFalha {
     constructor(
         @Inject(TabelaProducaoService) private tabelaProducaoService: TabelaProducaoService
     ) { }
     
-    async syncProducao(setor: CODIGOSETOR, date: Date): Promise<Mercado> {
+    async syncProducao(setor: Setor, date: Date): Promise<Mercado> {
         try {
-            const ultimoDiaLog = await this.tabelaProducaoService.consultarUltimoDia(date, setor);
+            const ultimoDiaLog = await this.tabelaProducaoService.consultarUltimoDia(date, setor.codigo);
             const targetMercado = new Mercado(setor);
             if (!ultimoDiaLog.length) { 
                 return targetMercado;
@@ -28,9 +28,9 @@ export class SyncMercadoManual implements ISyncProducao, ISyncProducaoFalha {
         }
     }   
 
-    async syncProducaFalha(setor: CODIGOSETOR, date: Date): Promise<TabelaProducao[]> {
+    async syncProducaFalha(setor: Setor, date: Date): Promise<TabelaProducao[]> {
         try {
-            const ultDiaFalhasLog = await this.tabelaProducaoService.consultarFalhasUltimoDia(date, setor);
+            const ultDiaFalhasLog = await this.tabelaProducaoService.consultarFalhasUltimoDia(date, setor.codigo);
             return ultDiaFalhasLog;
         } catch (error) {
             console.error(error)

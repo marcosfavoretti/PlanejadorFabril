@@ -1,8 +1,8 @@
 import { Controller, Get, Inject, Param, ParseEnumPipe, Post } from "@nestjs/common";
 import { ApiOkResponse, ApiParam, ApiResponse } from "@nestjs/swagger";
-import { ParamDataVirtual } from "src/modules/producao-simulacao/@core/enum/ParamDataVirtual.enum";
-import { ConsultarDateVirtualUseCase } from "src/modules/producao-simulacao/application/ConsultarDataVirutal.usecase";
-import { HandleDateVirtualUseCase } from "src/modules/producao-simulacao/application/HandleDataVirtual.usecase";
+import { ParamDataVirtual } from "src/modules/fabrica/@core/enum/ParamDataVirtual.enum";
+import { ConsultarDateVirtualUseCase } from "src/modules/fabrica/application/ConsultarDataVirutal.usecase";
+import { HandleDateVirtualUseCase } from "src/modules/fabrica/application/HandleDataVirtual.usecase";
 
 @Controller('virtual-date')
 export class VirtualDateController {

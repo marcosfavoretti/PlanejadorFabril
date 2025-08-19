@@ -1,9 +1,9 @@
-import { GerenciadorPlanejamento } from "../../src/modules/planejamento/@core/entities/GerenciadorPlanejamento";
-import { Planejamento } from "../../src/modules/planejamento/@core/entities/Planejamento.entity";
-import { PlanejamentoDiario } from "../../src/modules/planejamento/@core/entities/PlanejamentoDiario.entity";
+import { GerenciadorPlanejamento } from "../../src/modules/fabrica/infra/service/GerenciadorPlanejamento";
+import { Planejamento } from "../../src/modules/pedido/@core/entities/entities/Planejamento.entity";
+import { PlanejamentoDiario } from "../../src/modules/pedido/@core/entities/entities/PlanejamentoDiario.entity";
 import { CODIGOSETOR } from "../../src/modules/planejamento/@core/enum/CodigoSetor.enum";
-import { Item } from "../../src/modules/planejamento/@core/entities/Item.entity";
-import { Pedido } from "../../src/modules/planejamento/@core/entities/Pedido.entity";
+import { Item } from "../../src/modules/item/@core/entities/Item.entity";
+import { Pedido } from "../../src/modules/pedido/@core/entities/entities/Pedido.entity";
 
 describe("GerenciadorPlanejamento.addPlanejamento", () => {
     let planejamentoRepo: any;

@@ -15,7 +15,7 @@ export class Calendario implements IDiasPossiveis {
 
         while (dias.length < qtdDias) {
             if (!datefns.isWeekend(dataAtual)) {
-                dias.push(new Date(dataAtual)); 
+                dias.push(new Date(dataAtual));
             }
             dataAtual = this.subDays(dataAtual, 1);
         }
@@ -43,6 +43,20 @@ export class Calendario implements IDiasPossiveis {
             dia = datefns.subDays(dia, 1);
         }
         return datefns.startOfDay(dia);
+    }
+
+    
+
+    proximoDiaUtilReplanejamento(dia: Date): Date {
+        const amanha = datefns.startOfTomorrow();
+
+        let candidato = datefns.isAfter(dia, amanha) ? dia : amanha;
+
+        while (datefns.isWeekend(candidato)) {
+            candidato = datefns.addDays(candidato, 1);
+        }
+
+        return candidato;
     }
 
 
