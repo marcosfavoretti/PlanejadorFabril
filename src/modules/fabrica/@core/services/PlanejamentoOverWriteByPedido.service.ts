@@ -11,21 +11,28 @@ export class PlanejamentoOverWriteByPedidoService implements IGerenciaOverwrite<
 
 
     resolverOverwrite(data: PlanejamentoSnapShot[]): PlanejamentoSnapShot[] {
-        data.sort((a, b) => a.planejamentoSnapShotId - b.planejamentoSnapShotId);
-        const resultadoMap = new Map<string, PlanejamentoSnapShot>();
-        for (const snapshot of data) {
-            const item = snapshot.planejamento.item.Item;
-            const dia = snapshot.planejamento.dia.toISOString();
-            const setor = snapshot.planejamento.setor.codigo;
-            const pedido = snapshot.planejamento.pedido.id;
-            const key = `${item}|${dia}|${setor}|${pedido}`;
-            if (snapshot.tipoAcao === 'delete') {
-                resultadoMap.delete(key);
-            } else {
-                resultadoMap.set(key, snapshot);
+        try {
+            data.sort((a, b) => a.planejamentoSnapShotId - b.planejamentoSnapShotId);
+            const resultadoMap = new Map<string, PlanejamentoSnapShot>();
+            for (const snapshot of data) {
+                console.log(snapshot)
+                const item = snapshot.planejamento.item.Item;
+                const dia = snapshot.planejamento.dia.toISOString();
+                const setor = snapshot.planejamento.setor.codigo;
+                const pedido = snapshot.planejamento.pedido.id;
+                console.log(item)
+                const key = `${item}|${dia}|${setor}|${pedido}`;
+                if (snapshot.tipoAcao === 'delete') {
+                    resultadoMap.delete(key);
+                } else {
+                    resultadoMap.set(key, snapshot);
+                }
             }
+            return Array.from(resultadoMap.values());
+        } catch (error) {
+            console.log('errro no override', error)
+            throw error;
         }
-        return Array.from(resultadoMap.values());
     }
 
 

@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { config } from "dotenv";
-import * as path from 'path';
 config();
 
 function bancoPrincipal() {
@@ -10,10 +9,10 @@ function bancoPrincipal() {
             type: 'mssql',
             // logging: ['query'],
             logging: false,
-            database: 'ETHOS_SYNECO_DEV',
-            username: 'sa',
-            password: 'ncssp',
-            host: 'CERBERUS\\CERBERUS',
+            database: process.env.SQLDATABASE,
+            username: process.env.SQLUSER,
+            password: process.env.SQLSENHA,
+            host: process.env.SQLHOST,
             synchronize: false,
             entities: [
                 __dirname + '/../**/*.entity{.ts,.js}'

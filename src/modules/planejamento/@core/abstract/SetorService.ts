@@ -13,6 +13,11 @@ import { Fabrica } from "src/modules/fabrica/@core/entities/Fabrica.entity";
 import { RealocacaoProps } from "src/modules/fabrica/@core/classes/RealocacaoProps";
 import { Logger } from "@nestjs/common";
 import { RealocacaoParcial } from "../classes/RealocacaoParcial";
+import { Item } from "src/modules/item/@core/entities/Item.entity";
+import { ISelecionarItem } from "src/modules/fabrica/@core/interfaces/ISelecionarItem";
+import { AlocacaoProps } from "src/modules/fabrica/@core/classes/AlocacaoProps";
+
+
 
 /**
  * @description{classe onde encapsula regras de nogocio de cada setor}
@@ -24,40 +29,10 @@ export abstract class SetorService implements ISetorChain {
     private logger = new Logger();
 
     constructor(
-        private readonly mercadoStrategy: ISyncProducao & ISyncProducaoFalha,
-        private readonly gerenciadorPlan: IGerenciadorPlanejamentoMutation,
         private setor: CODIGOSETOR,
         private metodoAlocacao: MetodoDeAlocacao,
         private metodoRealocacao: MetodoDeReAlocacao,
-        private excecao?: ISetorExcecao[],
     ) { }
-
-    /**
-    //  * @param date 
-    //  * @param producaoDoSetorAnteriorUltDia 
-    //  * @returns 
-    //  * @description pega as informacoes da producao pela estrategia instanciada, decrementa o conforme a producao do setor do ultimo dia e incremente com base na producao do setor anterior. Responsavel tambem por encadear todos os mercados dos proximos setores
-    //  */
-    // async syncMercado(date: Date, producaoDoSetorAnteriorUltDia?: Mercado): Promise<Mercado[]> {
-    //     try {
-    //         const producaoAtual = await this.mercadoStrategy.syncProducao(this.setor, date);
-    //         this.atualizarMercadoAtual(producaoAtual, producaoDoSetorAnteriorUltDia);
-    //         const mercadosSincronizados = [this.mercado];
-    //         if (this.nextSetor) {
-    //             const mercadosFuturos = await this.nextSetor.syncMercado(date, producaoAtual);
-    //             mercadosSincronizados.push(...mercadosFuturos);
-    //         }
-    //         return mercadosSincronizados;
-    //     } catch (error) {
-    //         console.error(error);
-    //         throw new Error(`Erro ao sincronizar os mercados para o dia ${date.toLocaleDateString()}`);
-    //     }
-    // }
-
-    // private atualizarMercadoAtual(producaoAtual: Mercado, producaoAnterior?: Mercado): void {
-    //     if (producaoAnterior) this.mercado.concatMercado(producaoAnterior);
-    //     this.mercado.subtrairMercados(producaoAtual);
-    // }
 
     /**
      * @param date 
@@ -82,7 +57,7 @@ export abstract class SetorService implements ISetorChain {
 
         realocacaoAcumulada.adicionado.push(...doSetorAtual.adicionado)
         realocacaoAcumulada.retirado.push(...doSetorAtual.retirado);
-        
+
         // se houver próximo, empurra o estado adiante e pega o que ele acrescentar
         if (this.nextSetor) {
             // você pode ajustar props aqui se precisar propagar alguma mudança causada no setor atual
@@ -102,21 +77,22 @@ export abstract class SetorService implements ISetorChain {
      * @returns 
      * @description percorre até o ultimo setor e depois retrocede o planejando com base no planejado do proximo setor. Retorno sera o planejamento acumulado do pedido junto com o planejamento do primeiro setor
      */
-    public async alocar(fabrica: Fabrica, pedido: Pedido): Promise<ResultadoAlocacao> {
+    public async alocar(props: AlocacaoProps): Promise<ResultadoAlocacao> {
         let planejamentoDoProximoSetor: PlanejamentoTemporario[] = [];
         let acumulado: PlanejamentoTemporario[] = [];
 
         if (this.nextSetor) {
-            const resultadoDoProximo = await this.nextSetor.alocar(fabrica, pedido);
+            const resultadoDoProximo = await this.nextSetor.alocar(props);
             planejamentoDoProximoSetor = resultadoDoProximo.doSetorAtual;
             acumulado = [...resultadoDoProximo.acumulado];
         }
 
         const doSetorAtual = await this.metodoAlocacao.hookAlocacao(
-            fabrica,
-            pedido,
-            this.setor,
-            planejamentoDoProximoSetor
+            {
+                ...props,
+                setor: this.setor,
+                planDoProximoSetor: planejamentoDoProximoSetor
+            }
         );
 
         console.log(`SETOR ${this.setor} PROCESSADO`);
@@ -127,12 +103,21 @@ export abstract class SetorService implements ISetorChain {
         };
     }
 
+
+    public abstract cloneSetorService(): SetorService;
+
+    //====================GETTERS/SETTERS====================
+
     public setMetodoDeAlocacao(metodo: MetodoDeAlocacao): void {
         this.metodoAlocacao = metodo;
     }
 
     public setMetodoDeReAlocacao(metodo: MetodoDeReAlocacao): void {
         this.metodoRealocacao = metodo;
+    }
+
+    public getMetodoDeAlocacao(): MetodoDeAlocacao {
+        return this.metodoAlocacao;
     }
 
     public getSetorInChain(setor: CODIGOSETOR): SetorService {
@@ -144,6 +129,28 @@ export abstract class SetorService implements ISetorChain {
         }
         const targetSetor = this.nextSetor.getSetorInChain(setor);
         return targetSetor;
+    }
+
+    public getSetorInChainClone(setor: CODIGOSETOR): SetorService {
+        if (setor === this.setor) {
+            return this.cloneSetorService();
+        }
+        if (!this.nextSetor) {
+            throw new Error('O setor não esta na corrente');
+        }
+        const targetSetor = this.nextSetor.getSetorInChain(setor);
+        return targetSetor;
+    }
+
+    public getSetoresInChainClone(setores: CODIGOSETOR[]): SetorService[] {
+        const resultado: SetorService[] = [];
+        if (setores.includes(this.setor)) {
+            resultado.push(this.cloneSetorService());
+        }
+        if (this.nextSetor) {
+            return resultado.concat(this.nextSetor.getSetoresInChainClone(setores));
+        }
+        return resultado;
     }
 
     public getSetoresInChain(setores: CODIGOSETOR[]): SetorService[] {
@@ -165,9 +172,11 @@ export abstract class SetorService implements ISetorChain {
         return setor;
     }
 
+    getNextSetor():SetorService|undefined{
+        return this.nextSetor;
+    }
+
     public getSetorCode(): CODIGOSETOR {
         return this.setor;
     }
-
-
 }

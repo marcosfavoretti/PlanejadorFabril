@@ -3,99 +3,113 @@ import { SetorSolda } from "../planejamento/@core/services/SetorSolda";
 import { SetorLixa } from "../planejamento/@core/services/SetorLixa";
 import { SetorMontagem } from "../planejamento/@core/services/SetorMontagem";
 import { SetorPinturaLiq } from "../planejamento/@core/services/SetorPinturaliq";
-import { ISyncProducao } from "../planejamento/@core/interfaces/ISyncProducao";
-import { IGerenciadorPlanejamentoMutation } from "./@core/interfaces/IGerenciadorPlanejamento";
 import { MetodoDeAlocacao } from "../planejamento/@core/abstract/MetodoDeAlocacao";
 import { MetodoDeReAlocacao } from "../replanejamento/@core/abstract/MetodoDeReAlocacao";
-import { ISyncProducaoFalha } from "../planejamento/@core/interfaces/ISyncProducaoFalha";
 import { AlocaPorCapabilidade } from "../planejamento/@core/services/AlocaPorCapabilidade";
 import { RealocaPorCapabilidade } from "../replanejamento/@core/service/RealocaPorCapabilidade";
 import { AlocaPorBatelada } from "../planejamento/@core/services/AlocaPorBatelada";
+import { Provider } from "@nestjs/common";
+import { IGerenciadorPlanejamentConsulta } from "./@core/interfaces/IGerenciadorPlanejamentoConsulta";
+import { SelecionaItem000 } from "./@core/classes/SelecionaItem000";
+import { GerenciadorPlanejamento } from "./infra/service/GerenciadorPlanejamento";
+import { SelecionaItemRops } from "./@core/classes/SelecionaItemRops";
+import { AlocaItensDependencias } from "../planejamento/@core/services/AlocaItensDependencias";
+import { SetorPinturaPo } from "../planejamento/@core/services/SetorPinturaPo";
 
-export const SetorFabricaProviders = [
+export const SetorFabricaProviders: Provider[] = [
+    {
+        provide: IGerenciadorPlanejamentConsulta,
+        useClass: GerenciadorPlanejamento
+    },
+    {
+        provide: 'AlocaCapabilidadeMontagem',
+        useFactory: (g: IGerenciadorPlanejamentConsulta) => new AlocaPorCapabilidade(g, new SelecionaItem000()), inject: [IGerenciadorPlanejamentConsulta]
+    },
+    {
+        provide: 'AlocaCapabilidadeRops',
+        useFactory: (g: IGerenciadorPlanejamentConsulta) => new AlocaPorCapabilidade(g, new SelecionaItemRops()), inject: [IGerenciadorPlanejamentConsulta]
+    },
+    {
+        provide: 'AlocaPorBateladaRops',
+        useFactory: (g: IGerenciadorPlanejamentConsulta) => new AlocaPorBatelada(g, new SelecionaItemRops()), inject: [IGerenciadorPlanejamentConsulta]
+    },
+    AlocaItensDependencias,
     {
         provide: SetorLixa,
         useFactory: (
-            syncProducaoFalha: ISyncProducao & ISyncProducaoFalha,
-            iGerenciadorPlanejamentoMutation: IGerenciadorPlanejamentoMutation,
             metodoDeAlocacao: MetodoDeAlocacao,
-            metodoDeReAlocacao: MetodoDeReAlocacao
+            metodoDeReAlocacao: MetodoDeReAlocacao,
         ) => {
             return new SetorLixa(
-                syncProducaoFalha,
-                iGerenciadorPlanejamentoMutation,
                 metodoDeAlocacao,
-                metodoDeReAlocacao
+                metodoDeReAlocacao,
             );
         },
-        inject: [ISyncProducao, IGerenciadorPlanejamentoMutation, AlocaPorCapabilidade, RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaCapabilidadeRops', RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
     },
     {
         provide: SetorSolda,
         useFactory: (
-            syncProducaoFalha: ISyncProducao & ISyncProducaoFalha,
-            iGerenciadorPlanejamentoMutation: IGerenciadorPlanejamentoMutation,
             metodoDeAlocacao: MetodoDeAlocacao,
-            metodoDeReAlocacao: MetodoDeReAlocacao
+            metodoDeReAlocacao: MetodoDeReAlocacao,
         ) => {
             return new SetorSolda(
-                syncProducaoFalha,
-                iGerenciadorPlanejamentoMutation,
                 metodoDeAlocacao,
-                metodoDeReAlocacao
+                metodoDeReAlocacao,
             );
         },
-        inject: [ISyncProducao, IGerenciadorPlanejamentoMutation, AlocaPorCapabilidade, RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaCapabilidadeRops', RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
+    },
+    {
+        provide: SetorPinturaPo,
+        useFactory: (
+            metodoDeAlocacao: MetodoDeAlocacao,
+            metodoDeReAlocacao: MetodoDeReAlocacao,
+        ) => {
+            return new SetorPinturaPo(
+                metodoDeAlocacao,
+                metodoDeReAlocacao,
+            );
+        },
+        inject: ['AlocaCapabilidadeRops', RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
     },
     {
         provide: SetorBanho,
         useFactory: (
-            syncProducaoFalha: ISyncProducao & ISyncProducaoFalha,
-            iGerenciadorPlanejamentoMutation: IGerenciadorPlanejamentoMutation,
             metodoDeAlocacao: AlocaPorBatelada,
-            metodoDeReAlocacao: MetodoDeReAlocacao
+            metodoDeReAlocacao: MetodoDeReAlocacao,
         ) => {
             return new SetorBanho(
-                syncProducaoFalha,
-                iGerenciadorPlanejamentoMutation,
                 metodoDeAlocacao,
-                metodoDeReAlocacao
+                metodoDeReAlocacao,
             );
         },
-        inject: [ISyncProducao, IGerenciadorPlanejamentoMutation, AlocaPorBatelada, RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaPorBateladaRops', RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
     },
     {
         provide: SetorPinturaLiq,
         useFactory: (
-            syncProducaoFalha: ISyncProducao & ISyncProducaoFalha,
-            iGerenciadorPlanejamentoMutation: IGerenciadorPlanejamentoMutation,
             metodoDeAlocacao: MetodoDeAlocacao,
-            metodoDeReAlocacao: MetodoDeReAlocacao
+            metodoDeReAlocacao: MetodoDeReAlocacao,
         ) => {
             return new SetorPinturaLiq(
-                syncProducaoFalha,
-                iGerenciadorPlanejamentoMutation,
                 metodoDeAlocacao,
-                metodoDeReAlocacao
+                metodoDeReAlocacao,
             );
         },
-        inject: [ISyncProducao, IGerenciadorPlanejamentoMutation, AlocaPorCapabilidade, RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaCapabilidadeRops', RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
     },
     {
         provide: SetorMontagem,
         useFactory: (
-            syncProducaoFalha: ISyncProducao & ISyncProducaoFalha,
-            iGerenciadorPlanejamentoMutation: IGerenciadorPlanejamentoMutation,
             metodoDeAlocacao: MetodoDeAlocacao,
-            metodoDeReAlocacao: MetodoDeReAlocacao
+            metodoDeReAlocacao: MetodoDeReAlocacao,
         ) => {
             return new SetorMontagem(
-                syncProducaoFalha,
-                iGerenciadorPlanejamentoMutation,
                 metodoDeAlocacao,
-                metodoDeReAlocacao
+                metodoDeReAlocacao,
             );
         },
-        inject: [ISyncProducao, IGerenciadorPlanejamentoMutation, AlocaPorCapabilidade, RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaCapabilidadeMontagem', RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
     },
 ];

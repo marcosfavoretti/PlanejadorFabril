@@ -1,13 +1,14 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ItemRepository } from "../repository/Item.repository";
 import { Item } from "../../@core/entities/Item.entity";
+import { In } from "typeorm";
 
 export class ItemService {
     constructor(
         @Inject(ItemRepository) private itemRepository: ItemRepository
     ) { }
 
-    async salvarItem(item: Item):Promise<Item>{
+    async salvarItem(item: Item): Promise<Item> {
         return await this.itemRepository.save(item);
     }
 
@@ -18,8 +19,14 @@ export class ItemService {
             }
         });
     }
-
-    async consultarItens(): Promise<Item[]> {
+    async consultarItens(itensIds: string[]): Promise<Item[]> {
+        return await this.itemRepository.find({
+            where: {
+                Item: In(itensIds)
+            }
+        });
+    }
+    async consultarTodosItens(): Promise<Item[]> {
         return await this.itemRepository.find();
     }
 }

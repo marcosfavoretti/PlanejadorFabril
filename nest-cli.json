@@ -13,7 +13,8 @@
         "include": "@sql/*",
         "outDir": "dist/modules/@sql"
       }
-    ]
+    ],
+    "watchAssets": true
   }
-    
+  
 }

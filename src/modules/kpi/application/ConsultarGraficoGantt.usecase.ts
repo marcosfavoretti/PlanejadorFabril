@@ -1,5 +1,5 @@
 import { Inject, InternalServerErrorException } from "@nestjs/common";
-import { GetGanttInformationDto } from "src/delivery/dtos/GetGanttInformation.dto";
+import { GanttLegendaDto, GetGanttInformationDto } from "src/delivery/dtos/GetGanttInformation.dto";
 import { addMonths, set, subMonths } from "date-fns";
 import { Calendario } from "src/modules/shared/@core/classes/Calendario";
 import { ConsultarGanttDTO } from "src/delivery/dtos/ConsultarGantt.dto";
@@ -9,6 +9,7 @@ import { PlanejamentoOverWriteByPedidoService } from "src/modules/fabrica/@core/
 import { PlanejamentoResponseDTO } from "src/delivery/dtos/PlanejamentoResponse.dto";
 import { ColorGenerator } from "src/modules/shared/@core/classes/GeradorDeCor";
 import { SetoresPalhetaDeCores } from "../@core/classes/GanttColors";
+import { OqColorirGantt } from "../@core/enum/OqueColorirGantt.enum";
 
 export class ConsultarGraficoGanttUseCase {
     constructor(
@@ -20,7 +21,8 @@ export class ConsultarGraficoGanttUseCase {
     colorGenerator = new ColorGenerator();
 
     private calendario: Calendario = new Calendario();
-    async consultar(dto: ConsultarGanttDTO): Promise<GetGanttInformationDto[]> {
+
+    async consultar(dto: ConsultarGanttDTO): Promise<GetGanttInformationDto> {
         try {
             const fabrica = await this.fabricaService.consultaFabrica(dto.fabricaId)
             const today = new Date();
@@ -51,12 +53,12 @@ export class ConsultarGraficoGanttUseCase {
                     this.colorMap.set(pedidoId, this.colorGenerator.next());
                 }
             });
+            //
 
-            return sortedItens.map((i) => {
+            const data = sortedItens.map((i) => {
                 return {
                     id: `${i.planejamentoSnapShotId}`,
-                    // color: this.colorMap.get(i.planejamento.pedido.id),
-                    color: SetoresPalhetaDeCores.colors[i.planejamento.setor.codigo],
+                    color: dto.colorir === OqColorirGantt.OPERACAO ? SetoresPalhetaDeCores.colors[i.planejamento.setor.codigo] : this.colorMap.get(i.planejamento.pedido.id),
                     name: `${i.planejamento.item.getCodigo()} | ${i.planejamento.setor.codigo} | pedido: ${i.planejamento.pedido.codigo} | planejado : ${i.planejamento.qtd} `,
                     start: this.calendario.format(this.calendario.addDays(i.planejamento.dia, 0)),
                     end: this.calendario.format(this.calendario.addDays(i.planejamento.dia, 1)),
@@ -65,9 +67,37 @@ export class ConsultarGraficoGanttUseCase {
                     dependencies: JSON.stringify(PlanejamentoResponseDTO.fromEntity(i.planejamento))
                 };
             });
+            const legenda = dto.colorir === OqColorirGantt.OPERACAO ? this.legendaDeOperacao() : this.legendaDePedido()
+            return {
+                data,
+                legenda
+            }
+
         } catch (error) {
             console.error(error);
             throw new InternalServerErrorException(error);
         }
+    }
+
+    private legendaDePedido(): GanttLegendaDto[] {
+        const legenda: GanttLegendaDto[] = [];
+        for (const item of this.colorMap.entries()) {
+            legenda.push({
+                legenda: String(item[0]),
+                cor: item[1]
+            })
+        }
+        return legenda;
+    }
+
+    private legendaDeOperacao(): GanttLegendaDto[] {
+        const legenda: GanttLegendaDto[] = [];
+        for (const item of Object.entries(SetoresPalhetaDeCores.colors)) {
+            legenda.push({
+                legenda: item[0],
+                cor: item[0]
+            })
+        }
+        return legenda;
     }
 }

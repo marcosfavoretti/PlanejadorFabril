@@ -20,7 +20,7 @@ export class AtualizarPlanejamentoDTO {
     qtd: number;
 
 
-    @ApiProperty({ nullable: true })
+    @ApiProperty({ nullable: true, type: Date})
     @IsOptional()
     @Transform(({ value }) => value && new Date(value))
     @IsDate()

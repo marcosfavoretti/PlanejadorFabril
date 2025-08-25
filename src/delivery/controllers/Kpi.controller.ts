@@ -15,11 +15,10 @@ export class KPIController {
         status: 200,
         description: 'Tabela de produção gerada com sucesso',
         type: () => GetGanttInformationDto,
-        isArray: true
     })
     async getGanttInformationMethod(
         @Query() dto: ConsultarGanttDTO
-    ): Promise<GetGanttInformationDto[]> {
+    ): Promise<GetGanttInformationDto> {
         return await this.consultarGraficoGanttUseCase.consultar(dto);
     }
 

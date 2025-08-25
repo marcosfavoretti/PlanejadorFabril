@@ -51,7 +51,7 @@ export class GerenciadorPlanejamento implements
 
         for (const planejamentoTemp of planejamentosTemp) {
             
-            const planejamentoSemelhante = await this.consultaPlanejamentoService.consulta(
+            const planejamentoSemelhante = await this.consultaPlanejamentoService.consultaItemNoSetorNoDia(
                 fabrica,
                 pedido.item,
                 planejamentoTemp.setor,
@@ -170,7 +170,7 @@ export class GerenciadorPlanejamento implements
 
     async possoAlocarQuantoNoDia(fabrica: Fabrica, dia: Date, setor: CODIGOSETOR, item: Item, estrategiaVerificacao: IVerificaCapacidade, planejamentosTemporarios?: PlanejamentoTemporario[]): Promise<number> {
         try {
-            const planejamentos = await this.consultaPlanejamentoService.consulta(fabrica, item, setor, dia, new PlanejamentoOverWriteByPedidoService());
+            const planejamentos = await this.consultaPlanejamentoService.consultaItemNoSetorNoDia(fabrica, item, setor, dia, new PlanejamentoOverWriteByPedidoService());
 
             const totalPlanejadoSalvo = planejamentos
                 .reduce((total, p) => total + Number(p.planejamento.qtd), 0);
@@ -203,7 +203,7 @@ export class GerenciadorPlanejamento implements
     ): Promise<boolean> {
         try {
             const planejamentos = await this.consultaPlanejamentoService
-                .consulta(fabrica, item, setor, dia, new PlanejamentoOverWriteByPedidoService());
+                .consultaItemNoSetorNoDia(fabrica, item, setor, dia, new PlanejamentoOverWriteByPedidoService());
 
             const totalPlanejadoSalvo = planejamentos
                 .reduce((total, p) => total + Number(p.planejamento.qtd), 0);
@@ -211,7 +211,7 @@ export class GerenciadorPlanejamento implements
             const totalPlanejadoTemporario = (planejamentosTemporarios ?? [])
                 .filter(p =>
                     this.calendario.ehMesmoDia(p.dia, dia) &&
-                    p.item.getCodigo() === item.getCodigo() &&
+                    p.pedido.item.getCodigo() === item.getCodigo() &&
                     p.setor === setor
                 )
                 .reduce((total, p) => total + p.qtd, 0);

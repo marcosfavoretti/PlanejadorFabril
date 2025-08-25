@@ -5,7 +5,6 @@ import { JobsModule } from './modules/jobs/Jobs.module';
 
 @Module({
   imports: [
-    JobsModule,
     TypeormDevConfigModule,
     DeliveryModule
   ],

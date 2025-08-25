@@ -149,7 +149,6 @@ export class ConsultaPlanejamentoService {
         }
     }
 
-
     async consultaPlanejamentoAtual(fabrica: Fabrica, overwriteStrategy: IGerenciaOverwrite<PlanejamentoSnapShot>): Promise<PlanejamentoSnapShot[]> {
         try {
             const fabricasAlvo = await this.fabricaService.consultarFabricasAteCheckPoint(fabrica);
@@ -166,7 +165,7 @@ export class ConsultaPlanejamentoService {
         }
     }
 
-    async consultaPlanejamentoSnapShot(planejamentoSnapShotId: number):Promise<PlanejamentoSnapShot>{
+    async consultaPlanejamentoSnapShot(planejamentoSnapShotId: number): Promise<PlanejamentoSnapShot> {
         return await this.planejamentoSnapShotRepository.findOneOrFail({
             where: {
                 planejamentoSnapShotId: planejamentoSnapShotId
@@ -181,7 +180,7 @@ export class ConsultaPlanejamentoService {
      * @param dia 
      * @returns consulta os planejados para a fabrica
      */
-    async consulta(fabrica: Fabrica, item: Item, setor: CODIGOSETOR, dia: Date, overwriteStrategy: IGerenciaOverwrite<PlanejamentoSnapShot>): Promise<PlanejamentoSnapShot[]> {
+    async consultaItemNoSetorNoDia(fabrica: Fabrica, item: Item, setor: CODIGOSETOR, dia: Date, overwriteStrategy: IGerenciaOverwrite<PlanejamentoSnapShot>): Promise<PlanejamentoSnapShot[]> {
         try {
             const fabricasAlvo = await this.fabricaService.consultarFabricasAteCheckPoint(fabrica);
             const snapShotCompleto = await this.planejamentoSnapShotRepository.find({
@@ -193,8 +192,10 @@ export class ConsultaPlanejamentoService {
                         setor: {
                             codigo: setor
                         },
-                        item: {
-                            Item: item.Item
+                        pedido: {
+                            item: {
+                                Item: item.Item
+                            }
                         },
                         dia: dia
                     }

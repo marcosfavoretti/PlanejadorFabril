@@ -5,40 +5,70 @@ import { PlanejamentoTemporario } from "../classes/PlanejamentoTemporario";
 import { CODIGOSETOR } from "../enum/CodigoSetor.enum";
 import { Fabrica } from "src/modules/fabrica/@core/entities/Fabrica.entity";
 import { IVerificaCapacidade } from "src/modules/fabrica/@core/interfaces/IVerificaCapacidade";
+import { ISelecionarItem } from "src/modules/fabrica/@core/interfaces/ISelecionarItem";
+import { AlocacaoProps } from "src/modules/fabrica/@core/classes/AlocacaoProps";
+import { Item } from "src/modules/item/@core/entities/Item.entity";
+
+export type HookAlocacaoProps = AlocacaoProps & {
+    setor: CODIGOSETOR,
+    planDoProximoSetor?: PlanejamentoTemporario[]
+};
+
+export type AlocacaoComDependenciaProps = HookAlocacaoProps & {
+    planDoProximoSetor: PlanejamentoTemporario[]
+    itemContext: Item
+}
+
+export type AlocacaoSemDependenciaProps = {
+    fabrica: Fabrica,
+    pedido: Pedido,
+    setor: CODIGOSETOR,
+    dias: Date[],
+    itemContext: Item
+}
 
 export abstract class MetodoDeAlocacao {
     protected calendario: Calendario = new Calendario();
 
     constructor(
         protected gerenciadorPlan: IGerenciadorPlanejamentConsulta,
-    ) {
-    }
+        protected Itemselecionador: ISelecionarItem
+    ) { }
 
     protected abstract diasPossiveis(fabrica: Fabrica, pedido: Pedido, setor: CODIGOSETOR): Promise<Date[]>;
 
-    protected abstract alocacao(fabrica: Fabrica, pedido: Pedido, setor: CODIGOSETOR, dias: Date[]): Promise<PlanejamentoTemporario[]>;
+    protected abstract alocacao(
+        props: AlocacaoSemDependenciaProps
+    ): Promise<PlanejamentoTemporario[]>;
 
     protected abstract alocacaoComDependencia(
-        fabrica: Fabrica,
-        pedido: Pedido,
-        setor: CODIGOSETOR,
-        planejamentoProximoSetor: PlanejamentoTemporario[]
+        props: AlocacaoComDependenciaProps
     ): Promise<PlanejamentoTemporario[]>;
 
     public async hookAlocacao(
-        fabrica: Fabrica,
-        pedido: Pedido,
-        setor: CODIGOSETOR,
-        planDoProximoSetor?: PlanejamentoTemporario[]
+        props: HookAlocacaoProps
     ): Promise<PlanejamentoTemporario[]> {
+        const itemContext = this.Itemselecionador.seleciona(props.estrutura);
+        console.log(itemContext)
         const planejamento: PlanejamentoTemporario[] = [];
-        if (planDoProximoSetor && planDoProximoSetor.length) {
-            const alocacao = await this.alocacaoComDependencia(fabrica, pedido, setor, planDoProximoSetor);
+        if ((props.planDoProximoSetor && props.planDoProximoSetor.length) || (props.planBase && props.planBase.length)) {
+            // const alocacao = await this.alocacaoComDependencia(props.fabrica, props.pedido, props.setor, props.planDoProximoSetor);
+            const alocacao = await this.alocacaoComDependencia({
+                ...props,
+                itemContext,
+                planDoProximoSetor: props.planDoProximoSetor || props.planBase || []
+            });
             planejamento.push(...alocacao);
         }
         else {
-            const diasDoSetor = await this.diasPossiveis(fabrica, pedido, setor);
-            const alocacao = await this.alocacao(fabrica, pedido, setor, diasDoSetor);
+            const diasDoSetor = await this.diasPossiveis(props.fabrica, props.pedido, props.setor);
+            const alocacao = await this.alocacao({
+                dias: diasDoSetor,
+                fabrica: props.fabrica,
+                pedido: props.pedido,
+                setor: props.setor,
+                itemContext
+            });
             planejamento.push(...alocacao);
         }
         return planejamento

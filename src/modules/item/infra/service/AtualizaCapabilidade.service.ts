@@ -22,7 +22,6 @@ export class AtualizaCapabilidade {
             cap.item = item;
             item.itemCapabilidade.push(cap);
         }
-
         // Apenas retorna o item atualizado, sem salvar no banco
         return item;
     }

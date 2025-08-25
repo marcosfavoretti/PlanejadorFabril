@@ -14,8 +14,14 @@ export class EfetivaPlanejamentoService {
     @Inject(IConverteItem) private readonly converteItem: IConverteItem,
     private readonly fabricaService: FabricaService,
     private readonly planejamentoSnapShotRepository: PlanejamentoSnapShotRepository,
-  ) {}
+  ) { }
 
+  /**
+   * @param fabrica 
+   * @param planejamentosTemporarios 
+   * @returns 
+   * @description funcao especializadas em salvar os snapshots no banco de dados
+   */
   async efetiva(
     fabrica: Fabrica,
     planejamentosTemporarios: PlanejamentoTemporario[],
@@ -39,8 +45,8 @@ export class EfetivaPlanejamentoService {
       const fabricaAtualizada = await this.fabricaService.saveFabrica(fabrica);
 
       return fabricaAtualizada.planejamentoSnapShots;
+
     } catch (error) {
-      // mantém o stack original, só adiciona contexto
       throw new Error(`Problemas para salvar o planejamento: ${(error as Error).message}`);
     }
   }
@@ -49,7 +55,6 @@ export class EfetivaPlanejamentoService {
     const snapShotClone = planejamento.copy();
     snapShotClone.tipoAcao = SnapShotEstados.delete;
     snapShotClone.fabrica = fabrica;
-
     await this.planejamentoSnapShotRepository.save(snapShotClone);
   }
 
@@ -62,16 +67,18 @@ export class EfetivaPlanejamentoService {
   ): Promise<PlanejamentoSnapShot> {
     const acao = this.resolveAcao(planejamentoTemp.qtd);
 
-    const itemResolvido =
-      planejamentoTemp.setor === CODIGOSETOR.MONTAGEM
-        ? planejamentoTemp.pedido.item
-        : await this.converteItem.convete_para_110(planejamentoTemp.pedido.item.Item);
+    // const itemResolvido =
+    //   planejamentoTemp.setor === CODIGOSETOR.MONTAGEM
+    //     ? planejamentoTemp.pedido.item
+    //     : await this.converteItem.converter(planejamentoTemp.pedido.item.Item);
+
+    console.log(planejamentoTemp.item.getCodigo())
 
     return this.planejamentoSnapShotRepository.create({
       fabrica,
       planejamento: {
         ...planejamentoTemp,
-        item: itemResolvido,
+        item: planejamentoTemp.item,
         setor: planejamentoTemp.setor ? { codigo: planejamentoTemp.setor } : undefined,
       },
       tipoAcao: acao,

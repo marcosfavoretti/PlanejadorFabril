@@ -35,15 +35,12 @@ export class ImportadorDePedidosUseCase {
 
         const pedidosSalvos = await this.salvarPedidos(pedidosParaSalvar);
 
-
         if (pedidosSalvos.length) {
             this.logger.log('PLANEJAMENTO IRA SER EXECUTADO');
             const pedidosSalvosDependecias = await this.pedidoService.consultarPedidos(
                 pedidosSalvos.map(ped => ped.id)
             )
             const paraPlanejar = pedidosSalvosDependecias.filter(ped => ped.pedidoEhValido());
-
-            console.log(paraPlanejar)
 
             paraPlanejar.length && await this.planejarPedidoUseCase.planeje({
                 pedidoIds: paraPlanejar.map(ped => ped.id),

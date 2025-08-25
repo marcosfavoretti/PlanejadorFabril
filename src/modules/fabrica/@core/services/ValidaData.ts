@@ -4,6 +4,7 @@ import { Fabrica } from "../entities/Fabrica.entity";
 import { IValidaPlanejamento } from "../interfaces/IValidaPlanejamento";
 import { Calendario } from "src/modules/shared/@core/classes/Calendario";
 import { ErroDeValidacao } from "../exception/ErroDeValidacao.exception";
+import { isBefore, startOfTomorrow } from "date-fns";
 
 export class ValidaData implements IValidaPlanejamento {
 
@@ -17,9 +18,9 @@ export class ValidaData implements IValidaPlanejamento {
      * O planejamentos nunca pode alocar itens pro dia atual, sempre para dias na frente
      */
     valide(fabrica: Fabrica, pedido: Pedido, planejamentosTemp: PlanejamentoTemporario[]): void {
-        const [primeiraData] = planejamentosTemp.sort((a, b) => a.dia.getTime() - b.dia.getTime());
-        if(!primeiraData) return;
-        if (this.calendario.proximoDiaUtil(this.calendario.inicioDoDia(new Date()), false).getTime() > primeiraData.dia.getTime()) {
+        const [primeiroPlanejado] = planejamentosTemp.sort((a, b) => a.dia.getTime() - b.dia.getTime());
+        if(!primeiroPlanejado) return;
+        if (isBefore(primeiroPlanejado.dia, startOfTomorrow())) {
             throw new ErroDeValidacao('Data do planejamento não pode ser anterior ao dia atual');
         }
     }

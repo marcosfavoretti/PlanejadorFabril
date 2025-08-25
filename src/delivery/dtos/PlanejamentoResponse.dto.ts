@@ -26,7 +26,7 @@ export class PlanejamentoResponseDTO {
     static fromEntity(entity: Planejamento): PlanejamentoResponseDTO {
         const dto = new PlanejamentoResponseDTO();
         dto.planejamentoId = entity.planejamentoId;
-        dto.item = entity.item.Item; 
+        dto.item = entity.pedido.item.Item; 
         dto.setor = entity.setor.codigo; 
         dto.pedido = entity.pedido.codigo; 
         dto.dia = entity.dia;

@@ -2,7 +2,6 @@ import { Inject, Logger } from "@nestjs/common";
 import { Pedido } from "../../../pedido/@core/entities/Pedido.entity";
 import { IGerenciadorPlanejamentoMutation } from "../../@core/interfaces/IGerenciadorPlanejamento";
 import { Fabrica } from "src/modules/fabrica/@core/entities/Fabrica.entity";
-import { MercadoSnapShotService } from "./MercadoSnapShot.service";
 import { Planejamento } from "src/modules/planejamento/@core/entities/Planejamento.entity";
 import { FabricaPlanejamentoResultado } from "../../@core/classes/FabricaPlanejamentoResultado";
 import { Divida } from "../../@core/entities/Divida.entity";
@@ -15,21 +14,28 @@ import { ConsultaPlanejamentoService } from "./ConsultaPlanejamentos.service";
 import { PlanejamentoOverWriteByPedidoService } from "../../@core/services/PlanejamentoOverWriteByPedido.service";
 import { Calendario } from "src/modules/shared/@core/classes/Calendario";
 import { SetorChainFactoryService } from "../../@core/services/SetorChainFactory.service";
-import { PlanejamentoService } from "src/modules/planejamento/infra/services/Planejamento.service";
 import { TabelaProducao } from "src/modules/planejamento/@core/entities/TabelaProducao.entity";
 import { TabelaProducaoRepository } from "src/modules/planejamento/infra/repositories/TabelaProducao.repository";
 import { Repository } from "typeorm";
+import { IConsultarRoteiroPrincipal } from "../../@core/interfaces/IConsultarRoteiroPrincipal";
+import { IBuscarItemDependecias } from "src/modules/item/@core/interfaces/IBuscarItemDependecias";
+import { SetorService } from "src/modules/planejamento/@core/abstract/SetorService";
+import { IConsultaRoteiro } from "../../@core/interfaces/IConsultaRoteiro";
+import { AlocaItensDependencias } from "src/modules/planejamento/@core/services/AlocaItensDependencias";
+import { SelecionaItemDep } from "../../@core/classes/SelecionaItemDep";
+import { IGerenciadorPlanejamentConsulta } from "../../@core/interfaces/IGerenciadorPlanejamentoConsulta";
 
 export class FabricaSimulacaoService {
 
     constructor(
-        @Inject(PlanejamentoService) private planejamentoService: PlanejamentoService,
+        @Inject(IBuscarItemDependecias) private buscarDependencias: IBuscarItemDependecias,
+        @Inject(IConsultaRoteiro) private consultaRoteiro: IConsultaRoteiro,
+        @Inject(IConsultarRoteiroPrincipal) private consultaRoteiroPrincipal: IConsultarRoteiroPrincipal,
         @Inject(GerenciaDividaService) private gerenciaDividaService: GerenciaDividaService,
-        @Inject(MercadoSnapShotService) private mercadoSnapShotService: MercadoSnapShotService,
         @Inject(ConsultaPlanejamentoService) private consultaPlanejamentoService: ConsultaPlanejamentoService,
         @Inject(SetorChainFactoryService) private setorChainFactoryService: SetorChainFactoryService,
         @Inject(TabelaProducaoRepository) private tabelaRepo: Repository<TabelaProducao>,
-        @Inject(IGerenciadorPlanejamentoMutation) private readonly gerenciadorPlanejamento: IGerenciadorPlanejamentoMutation
+        @Inject(IGerenciadorPlanejamentoMutation) private readonly gerenciadorPlanejamento: IGerenciadorPlanejamentoMutation & IGerenciadorPlanejamentConsulta
     ) { }
 
     calendario = new Calendario();
@@ -45,23 +51,39 @@ export class FabricaSimulacaoService {
 
         try {
             for (const pedido of pedidos) {
-                // opcional: se possível, execute por pedido dentro de transação
-                const { acumulado: acumuladoInicial } = await this.setorChainFactoryService.getFirstSetor().alocar(fabrica, pedido);
+
+                const itensDepedencias = await this.buscarDependencias.buscar(pedido.item);
+
+                console.log(itensDepedencias)
+
+                const roteiro = await this.consultaRoteiroPrincipal.roteiro(pedido.item, itensDepedencias);
+
+                const estrutura = itensDepedencias.concat(pedido.item);
+
+                console.log(`ROTEIRO PRINCIPAL ${roteiro}`);
+
+                const pipeDeSetoresCustom = this.setorChainFactoryService.modificarCorrente(roteiro);
+
+                console.log(estrutura.map(a=>a.getCodigo()))
+
+                const { acumulado: acumuladoInicial } = await pipeDeSetoresCustom.alocar({
+                    fabrica,
+                    pedido,
+                    estrutura
+                });
 
                 let acumuladoFinal: PlanejamentoTemporario[] = Array.isArray(acumuladoInicial)
                     ? [...acumuladoInicial]
                     : [];
 
-                const planejamentosEmDivida = acumuladoInicial.filter(plan => isBefore(plan.dia, startOfTomorrow()));
-
-                const primeiroSetorDoPipe = this.setorChainFactoryService.getFirstSetor().getSetorCode();
+                const planejamentosEmDivida = acumuladoInicial
+                    .filter(plan => isBefore(plan.dia, startOfTomorrow()));
 
                 const planejamentosEmDividaASC = planejamentosEmDivida
-                    .filter(p => p.setor === primeiroSetorDoPipe)
+                    .filter(p => p.setor === pipeDeSetoresCustom.getSetorCode())
                     .sort((a, b) => a.dia.getTime() - b.dia.getTime());
 
-
-                const planejamentoBase = planejamentosEmDividaASC[0]; // pode ser undefined, trate isso
+                const planejamentoBase = planejamentosEmDividaASC[0];
 
                 console.log('planejamentos em divida', planejamentosEmDivida.map(
                     d => ({
@@ -69,21 +91,48 @@ export class FabricaSimulacaoService {
                         item: d.item.Item,
                         setor: d.setor
                     })
-                ))
+                ));
 
+                //caso a divida exista planejados que estao fora do range valido
                 if (planejamentosEmDivida.length && planejamentoBase) {
-                    this.logger.log('DIVIDA NO PLANEJAMENTO');
-                    const targetSetor = this.setorChainFactoryService.getSetor(planejamentoBase.setor);
-                    const { adicionado: realocacao, retirado } = await targetSetor.realocar(
-                        fabrica,
-                        {
-                            pedido: pedido,
-                            novaData: this.calendario.proximoDiaUtilReplanejamento(planejamentoBase.dia),
-                            planejamentoFalho: planejamentoBase,
-                            planejamentoPedido: acumuladoInicial,
-                        }
-                    );
-                    acumuladoFinal = realocacao;
+                    acumuladoFinal = await this.arrumaRangeDoPlanejamento({
+                        fabrica: fabrica,
+                        pedido: pedido,
+                        pipeProducao: pipeDeSetoresCustom,
+                        planBase: planejamentoBase,
+                        planOriginal: acumuladoInicial
+                    });
+                }
+                //->
+                if (itensDepedencias.length > 0) {
+                    for (const item of itensDepedencias) { // percorre todos
+                        const setoresDoItem = await this.consultaRoteiro.roteiro(item);
+                        console.log(setoresDoItem)
+                        const pipeDependenciasCustom = this.setorChainFactoryService.modificarCorrente(setoresDoItem);
+                        console.log(pipeDependenciasCustom.getSetoresInChain(setoresDoItem).map(a=>a.getSetorCode()));
+
+                        this.setorChainFactoryService.setMetodoDeAlocacaoCustomTodos(
+                            pipeDependenciasCustom,
+                            setoresDoItem,
+                            new AlocaItensDependencias(
+                                this.gerenciadorPlanejamento,
+                                new SelecionaItemDep()
+                            )
+                        );
+
+                        const { acumulado: acumuladoDeps } = await pipeDependenciasCustom.alocar({
+                            fabrica,
+                            pedido,
+                            estrutura: itensDepedencias,
+                            planBase: acumuladoFinal
+                        });
+
+                        itensDepedencias.pop();
+                        // não precisa remover da estrutura
+                        console.log(acumuladoDeps)
+
+                        acumuladoFinal.push(...acumuladoDeps);
+                    }
                 }
 
                 console.log(acumuladoInicial.sort((a, b) => a.dia.getTime() - b.dia.getTime()).map(a => a.dia.toLocaleDateString()))
@@ -99,11 +148,13 @@ export class FabricaSimulacaoService {
                     })
                 );
 
+                //corto os dias que estao fora do range de data e ja foram contabilizados como dividas
                 acumuladoFinal = acumuladoFinal.filter(plan =>
                     !isBefore(plan.dia, startOfTomorrow()) && // plan.dia >= amanhã
                     !isAfter(plan.dia, plan.pedido.getSafeDate()) // plan.dia <= safeDate
                 );
 
+                //salvo no banco meus planejamentos
                 const planejamentosDoPedido = await this.gerenciadorPlanejamento
                     .appendPlanejamento(fabrica, pedido, acumuladoFinal);
                 //
@@ -112,6 +163,7 @@ export class FabricaSimulacaoService {
                 planDiario.push(...planejamentosDoPedido);
             }
 
+            //da para jogar em um servico para encapsular isso
             const tabelas: TabelaProducao[] = planDiario
                 .map(planejamento =>
                     this.tabelaRepo.create({
@@ -137,20 +189,44 @@ export class FabricaSimulacaoService {
         }
     }
 
+    private async arrumaRangeDoPlanejamento(props: { fabrica: Fabrica, pedido: Pedido, planOriginal: PlanejamentoTemporario[], planBase: PlanejamentoTemporario, pipeProducao: SetorService, }): Promise<PlanejamentoTemporario[]> {
+        this.logger.log('DIVIDA NO PLANEJAMENTO');
+        const targetSetor = props.pipeProducao.getSetorInChain(props.planBase.setor);
+
+        const { adicionado: realocacao, retirado } = await targetSetor.realocar(
+            props.fabrica,
+            {
+                pedido: props.pedido,
+                novaData: this.calendario.proximoDiaUtilReplanejamento(props.planBase.dia),
+                planejamentoFalho: props.planBase,
+                planejamentoPedido: props.planOriginal,
+            }
+        );
+        return realocacao;
+    }
+
     async replanejar(fabrica: Fabrica, planejamentosFalhos: PlanejamentoTemporario[], novaData?: Date): Promise<FabricaPlanejamentoResultado> {
         const planDiario: Planejamento[] = [];
         const dividas: Divida[] = [];
+
         try {
             for (const realocacao of planejamentosFalhos) {
                 this.logger.log(`REPLANEJAR ${novaData} ${fabrica.fabricaId}`);
 
-                const planejamentosDoPedidoEmBanco = await this.consultaPlanejamentoService.consultaPorPedido(fabrica, [realocacao.pedido], new PlanejamentoOverWriteByPedidoService());
+                const planejamentosDoPedidoEmBanco = await this.consultaPlanejamentoService
+                    .consultaPorPedido(fabrica, [realocacao.pedido], new PlanejamentoOverWriteByPedidoService());
 
                 const planejamentosAlvos = planejamentosDoPedidoEmBanco.filter(plan => isAfter(plan.planejamento.dia, realocacao.dia));
 
-                const setorAlvo = this.setorChainFactoryService.getSetor(realocacao.setor);
+                const depedencias = await this.buscarDependencias.buscar(realocacao.pedido.item);
 
-                console.log(planejamentosAlvos)
+                const roteiro = await this.consultaRoteiroPrincipal.roteiro(realocacao.pedido.item, depedencias);
+
+                const pipeSetoresCustom = this.setorChainFactoryService
+                    .modificarCorrente(roteiro);
+
+                const setorAlvo = pipeSetoresCustom
+                    .getSetorInChain(realocacao.setor);
 
                 const { adicionado, retirado } = await setorAlvo.realocar(
                     fabrica, {
@@ -159,8 +235,6 @@ export class FabricaSimulacaoService {
                     planejamentoFalho: realocacao,
                     planejamentoPedido: planejamentosAlvos.map(p => PlanejamentoTemporario.createByEntity(p)),
                 });
-
-                console.log('afinal', adicionado, retirado)
 
                 //calculo se teve divida & salvamento
                 const dividasSalvas = await this.gerenciaDividaService
@@ -179,7 +253,6 @@ export class FabricaSimulacaoService {
                 const planejamentosDoPedido = await this.gerenciadorPlanejamento
                     .appendReplanejamento(fabrica, realocacao.pedido, planejamentosAlvos, adicionado);
                 //
-
 
                 for (const plan_retirado of retirado) {
                     if (plan_retirado.planejamentoSnapShotId) {
@@ -206,4 +279,5 @@ export class FabricaSimulacaoService {
             throw new Error(`problema ao salvar planejamentos temporarios: ${error.message}`);
         }
     }
+
 }

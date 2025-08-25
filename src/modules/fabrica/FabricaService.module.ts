@@ -41,8 +41,12 @@ import { ApagaPedidoPlanejadoService } from "./infra/service/ApagaPedidoPlanejad
 import { ReplanejarPedidoUseCase } from "./application";
 import { PedidoServiceModule } from "../pedido/PedidoService.module";
 import { IConverteItem } from "../item/@core/interfaces/IConverteItem";
-import { ConverteItem } from "../item/infra/service/ConverteItem.service";
 import { ItemServiceModule } from "../item/ItemService.module";
+import { IConsultaRoteiro } from "./@core/interfaces/IConsultaRoteiro";
+import { EstruturaNeo4jApiService } from "./infra/service/EstruturaNeo4jApi.service";
+import { IConsultarRoteiroPrincipal } from "./@core/interfaces/IConsultarRoteiroPrincipal";
+import { RoteiroPrincipal } from "./infra/service/RoteiroPrinciapal.service";
+import { IBuscarItemDependecias } from "../item/@core/interfaces/IBuscarItemDependecias";
 
 @Module({
     imports: [
@@ -72,8 +76,20 @@ import { ItemServiceModule } from "../item/ItemService.module";
         PlanejamentoValidatorExecutorService,
         ValidaData,
         {
+            provide: IConsultaRoteiro,
+            useClass: EstruturaNeo4jApiService
+        },
+        {
+            provide:IBuscarItemDependecias,
+            useClass: EstruturaNeo4jApiService
+        },
+        {
+            provide: IConsultarRoteiroPrincipal,
+            useClass: RoteiroPrincipal
+        },
+        {
             provide: IConverteItem,
-            useClass: ConverteItem
+            useClass: EstruturaNeo4jApiService
         },
         {
             provide: IGerenciadorPlanejamentConsulta,

@@ -1,23 +1,22 @@
 import { Fabrica } from "src/modules/fabrica/@core/entities/Fabrica.entity";
 import { Pedido } from "src/modules/pedido/@core/entities/Pedido.entity";
-import { MetodoDeAlocacao } from "../abstract/MetodoDeAlocacao";
+import { AlocacaoComDependenciaProps, AlocacaoSemDependenciaProps, MetodoDeAlocacao } from "../abstract/MetodoDeAlocacao";
 import { PlanejamentoTemporario } from "../classes/PlanejamentoTemporario";
 import { CODIGOSETOR } from "../enum/CodigoSetor.enum";
 import { IGerenciadorPlanejamentConsulta } from "src/modules/fabrica/@core/interfaces/IGerenciadorPlanejamentoConsulta";
-import { Inject } from "@nestjs/common";
 import { VerificaBatelada } from "src/modules/fabrica/@core/classes/VerificaBatelada";
 import { IVerificaCapacidade } from "src/modules/fabrica/@core/interfaces/IVerificaCapacidade";
+import { ISelecionarItem } from "src/modules/fabrica/@core/interfaces/ISelecionarItem";
 
 export class AlocaPorBatelada extends MetodoDeAlocacao {
     private readonly BATELADASMAX!: number;
 
     constructor(
-        @Inject(IGerenciadorPlanejamentConsulta) gerenciador: IGerenciadorPlanejamentConsulta,
+        gerenciador: IGerenciadorPlanejamentConsulta,
+        public selecionador: ISelecionarItem
     ) {
         const bateladas_max = Number(process.env.BATELADAMAX)
-        super(
-            gerenciador
-        );
+        super(gerenciador, selecionador);
         this.BATELADASMAX = bateladas_max;
     }
 
@@ -30,7 +29,7 @@ export class AlocaPorBatelada extends MetodoDeAlocacao {
     }
 
     //para tirar isso deveria aplicar interfaces de maneira mais inteligente. E nao template pattern.:.refatoração
-    protected async alocacao(fabrica: Fabrica, pedido: Pedido, setor: CODIGOSETOR, dias: Date[]): Promise<PlanejamentoTemporario[]> {
+    protected async alocacao(prosp: AlocacaoSemDependenciaProps): Promise<PlanejamentoTemporario[]> {
         throw new Error('NOT_IMPLEMENTED');
     }
 
@@ -38,12 +37,12 @@ export class AlocaPorBatelada extends MetodoDeAlocacao {
         throw new Error('NOT_IMPLEMENTED');
     }
     //
-    
-    protected async alocacaoComDependencia(fabrica: Fabrica, pedido: Pedido, setor: CODIGOSETOR, planejamentoProximoSetor: PlanejamentoTemporario[]): Promise<PlanejamentoTemporario[]> {
+
+    protected async alocacaoComDependencia(props: AlocacaoComDependenciaProps): Promise<PlanejamentoTemporario[]> {
         const planejamentosTemporarios: PlanejamentoTemporario[] = [];
-        const leadtime = pedido.getItem().getLeadtime(setor);
-        const planejamentosProxOrdenados = planejamentoProximoSetor.sort(this.ordenaPorMaisNovo());
-        let restante = pedido.getLote();
+        const leadtime = props.pedido.getItem().getLeadtime(props.setor);
+        const planejamentosProxOrdenados = props.planDoProximoSetor.sort(this.ordenaPorMaisNovo());
+        let restante = props.pedido.getLote();
         let jaAlocados: number = 0;
 
         for (const necessidade of planejamentosProxOrdenados) {
@@ -57,14 +56,14 @@ export class AlocaPorBatelada extends MetodoDeAlocacao {
             ) : necessidade.dia;
 
             const datasParaProgramar = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
-                fabrica, dataLimite, setor, pedido.item, precisoAlocar, new VerificaBatelada(this.BATELADASMAX), planejamentosTemporarios
+                props.fabrica, dataLimite, props.setor, props.pedido.item, precisoAlocar, new VerificaBatelada(this.BATELADASMAX), planejamentosTemporarios
             );
 
             console.log(`datas para suprir ${datasParaProgramar}`)
             const qtdMatriz: number[] = [];
 
             for (const data of datasParaProgramar) {
-                const response = await this.gerenciadorPlan.possoAlocarQuantoNoDia(fabrica, data, setor, pedido.item, new VerificaBatelada(this.BATELADASMAX), planejamentosTemporarios);
+                const response = await this.gerenciadorPlan.possoAlocarQuantoNoDia(props.fabrica, data, props.setor, props.pedido.item, new VerificaBatelada(this.BATELADASMAX), planejamentosTemporarios);
                 qtdMatriz.push(response);
             }
 
@@ -78,10 +77,10 @@ export class AlocaPorBatelada extends MetodoDeAlocacao {
                 if (qtdParaAlocar <= 0) continue;
                 planejamentosTemporarios.push({
                     dia: data,
-                    item: pedido.item,
-                    pedido,
+                    item: props.itemContext,
+                    pedido: props.pedido,
                     qtd: qtdParaAlocar,
-                    setor: setor,
+                    setor: props.setor,
                 });
                 restante -= qtdParaAlocar;
                 jaAlocados += qtdParaAlocar;

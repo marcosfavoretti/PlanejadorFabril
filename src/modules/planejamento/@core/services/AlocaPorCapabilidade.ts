@@ -1,20 +1,20 @@
-import { MetodoDeAlocacao } from "../abstract/MetodoDeAlocacao";
+import { AlocacaoComDependenciaProps, AlocacaoSemDependenciaProps, MetodoDeAlocacao } from "../abstract/MetodoDeAlocacao";
 import { CODIGOSETOR } from "../enum/CodigoSetor.enum";
-import { Inject } from "@nestjs/common";
 import { IGerenciadorPlanejamentConsulta } from "../../../fabrica/@core/interfaces/IGerenciadorPlanejamentoConsulta";
 import { PlanejamentoTemporario } from "../classes/PlanejamentoTemporario";
 import { Fabrica } from "src/modules/fabrica/@core/entities/Fabrica.entity";
 import { Pedido } from "src/modules/pedido/@core/entities/Pedido.entity";
 import { VerificaCapabilidade } from "src/modules/fabrica/@core/classes/VerificaCapabilidade";
 import { IVerificaCapacidade } from "src/modules/fabrica/@core/interfaces/IVerificaCapacidade";
-import { SetorService } from "../abstract/SetorService";
+import { ISelecionarItem } from "src/modules/fabrica/@core/interfaces/ISelecionarItem";
 
 export class AlocaPorCapabilidade extends MetodoDeAlocacao {
 
     constructor(
-        @Inject(IGerenciadorPlanejamentConsulta) gerenciador: IGerenciadorPlanejamentConsulta,
+        gerenciador: IGerenciadorPlanejamentConsulta,
+        selecionador: ISelecionarItem
     ) {
-        super(gerenciador);
+        super(gerenciador, selecionador);
     }
 
     verificacaoCapacidade(pedido: Pedido, codigoSetor: CODIGOSETOR): IVerificaCapacidade {
@@ -43,15 +43,12 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
     }
 
     protected async alocacaoComDependencia(
-        fabrica: Fabrica,
-        pedido: Pedido,
-        setor: CODIGOSETOR,
-        planejamentoProximoSetor: PlanejamentoTemporario[]
+        props: AlocacaoComDependenciaProps
     ): Promise<PlanejamentoTemporario[]> {
         const planejamentosTemporarios: PlanejamentoTemporario[] = [];
-        const leadtime = pedido.getItem().getLeadtime(setor);
-        const planejamentosProxOrdenados = planejamentoProximoSetor.sort(this.sortStrategy());
-        let restante = pedido.getLote();
+        const leadtime = props.pedido.getItem().getLeadtime(props.setor);
+        const planejamentosProxOrdenados = props.planDoProximoSetor.sort(this.sortStrategy());
+        let restante = props.pedido.getLote();
         for (const necessidade of planejamentosProxOrdenados) {
             if (restante <= 0) break;
 
@@ -64,13 +61,13 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
             ) : necessidade.dia;
 
             const datas = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
-                fabrica, dataLimite, setor, pedido.item, precisoAlocar, new VerificaCapabilidade(pedido.item, setor), planejamentosTemporarios
+                props.fabrica, dataLimite, props.setor, props.pedido.item, precisoAlocar, new VerificaCapabilidade(props.pedido.item, props.setor), planejamentosTemporarios
             );
 
             const qtdMatriz: number[] = [];
 
             for (const data of datas) {
-                const response = await this.gerenciadorPlan.possoAlocarQuantoNoDia(fabrica, data, setor, pedido.item, new VerificaCapabilidade(pedido.item, setor), planejamentosTemporarios);
+                const response = await this.gerenciadorPlan.possoAlocarQuantoNoDia(props.fabrica, data, props.setor, props.pedido.item, new VerificaCapabilidade(props.pedido.item, props.setor), planejamentosTemporarios);
                 qtdMatriz.push(response);
             }
 
@@ -79,15 +76,15 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
                 const qtdParaAlocar = Math.min(
                     restante,
                     possoAlocarNesseDia,
-                    pedido.item.capabilidade(setor)
+                    props.pedido.item.capabilidade(props.setor)
                 );
                 if (qtdParaAlocar <= 0) continue;
                 planejamentosTemporarios.push({
                     dia: data,
-                    item: pedido.item,
-                    pedido,
+                    item: props.itemContext,
+                    pedido: props.pedido,
                     qtd: qtdParaAlocar,
-                    setor: setor,
+                    setor: props.setor,
                 });
                 restante -= qtdParaAlocar;
                 if (restante <= 0) break; // encerramento antecipado
@@ -96,47 +93,47 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
         return planejamentosTemporarios;
     }
 
-    protected async alocacao(fabrica: Fabrica, pedido: Pedido, setor: CODIGOSETOR, dias: Date[]): Promise<PlanejamentoTemporario[]> {
+    protected async alocacao(props: AlocacaoSemDependenciaProps): Promise<PlanejamentoTemporario[]> {
         try {
             const planejamentosDoPedido: PlanejamentoTemporario[] = [];
-            let restante = pedido.getLote();
+            let restante = props.pedido.getLote();
             let i = 0;
-            dias.sort((a, b) => b.getTime() - a.getTime());
-            while (restante > 0 && i < dias.length) {
-                let dia = dias[i];
+            props.dias.sort((a, b) => b.getTime() - a.getTime());
+            while (restante > 0 && i < props.dias.length) {
+                let dia = props.dias[i];
 
-                let capacidadeRestante = await this.gerenciadorPlan.possoAlocarQuantoNoDia(fabrica, dia, setor, pedido.item, new VerificaCapabilidade(pedido.item, setor), planejamentosDoPedido);
+                let capacidadeRestante = await this.gerenciadorPlan.possoAlocarQuantoNoDia(props.fabrica, dia, props.setor, props.pedido.item, new VerificaCapabilidade(props.pedido.item, props.setor), planejamentosDoPedido);
 
                 if (capacidadeRestante <= 0) {
-                    const [primeiroDiaComEncaixe, ...outrosDiasComEncaixe] = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(fabrica, dia, setor, pedido.item, restante, new VerificaCapabilidade(pedido.item, setor), planejamentosDoPedido);
-                    dias.push(...outrosDiasComEncaixe);
+                    const [primeiroDiaComEncaixe, ...outrosDiasComEncaixe] = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(props.fabrica, dia, props.setor, props.pedido.item, restante, new VerificaCapabilidade(props.pedido.item, props.setor), planejamentosDoPedido);
+                    props.dias.push(...outrosDiasComEncaixe);
                     dia = primeiroDiaComEncaixe;
-                    capacidadeRestante = await this.gerenciadorPlan.possoAlocarQuantoNoDia(fabrica, dia, setor, pedido.item, new VerificaCapabilidade(pedido.item, setor), planejamentosDoPedido);
+                    capacidadeRestante = await this.gerenciadorPlan.possoAlocarQuantoNoDia(props.fabrica, dia, props.setor, props.pedido.item, new VerificaCapabilidade(props.pedido.item, props.setor), planejamentosDoPedido);
                 }
 
                 const quantidadeParaAlocar = Math.min(restante, capacidadeRestante);
 
                 planejamentosDoPedido.push({
                     dia: dia,
-                    item: pedido.item,
-                    pedido: pedido,
+                    item: props.itemContext,
+                    pedido: props.pedido,
                     qtd: quantidadeParaAlocar,
-                    setor: setor
+                    setor: props.setor
                 });
 
                 restante -= quantidadeParaAlocar;
 
-                if (restante > 0 && i === dias.length - 1) {
+                if (restante > 0 && i === props.dias.length - 1) {
                     const [novaData] = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
-                        fabrica,
+                        props.fabrica,
                         this.calendario.subDays(dia, 1),
-                        setor,
-                        pedido.item,
+                        props.setor,
+                        props.pedido.item,
                         restante,
-                        new VerificaCapabilidade(pedido.item, setor),
+                        new VerificaCapabilidade(props.pedido.item, props.setor),
                         planejamentosDoPedido
                     );
-                    dias.push(novaData);
+                    props.dias.push(novaData);
                 }
                 i++;
             }
@@ -144,7 +141,7 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
             return planejamentosDoPedido;
         } catch (error) {
             console.error(error);
-            throw new Error(`Erro ao alocar carga do pedido ${pedido.codigo}`);
+            throw new Error(`Erro ao alocar carga do pedido ${props.pedido.codigo}`);
         }
     }
 }  

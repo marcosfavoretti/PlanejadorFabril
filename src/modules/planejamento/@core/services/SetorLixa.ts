@@ -6,21 +6,27 @@ import { ISyncProducao } from "../interfaces/ISyncProducao";
 import { ISyncProducaoFalha } from "../interfaces/ISyncProducaoFalha";
 import { MetodoDeAlocacao } from "../abstract/MetodoDeAlocacao";
 import { MetodoDeReAlocacao } from "src/modules/replanejamento/@core/abstract/MetodoDeReAlocacao";
+import { ISelecionarItem } from "src/modules/fabrica/@core/interfaces/ISelecionarItem";
 
 
 
 export class SetorLixa extends SetorService {
     constructor(
-        @Inject(ISyncProducao) mercadoStrategy: ISyncProducao & ISyncProducaoFalha,
-        @Inject(IGerenciadorPlanejamentoMutation) gerenciadorPlan: IGerenciadorPlanejamentoMutation,
-        @Inject(MetodoDeAlocacao) metododealocacao: MetodoDeAlocacao,
-        @Inject(MetodoDeReAlocacao) metodoDeReAlocacao: MetodoDeReAlocacao
+        @Inject(MetodoDeAlocacao) private _metododealocacao: MetodoDeAlocacao,
+        @Inject(MetodoDeReAlocacao) private _metodoDeReAlocacao: MetodoDeReAlocacao,
     ) {
         const setor = CODIGOSETOR.LIXA;
-        super(mercadoStrategy,
-            gerenciadorPlan,
+        super(
             setor,
-            metododealocacao,
-            metodoDeReAlocacao);
+            _metododealocacao,
+            _metodoDeReAlocacao,
+        );
+    }
+
+    public cloneSetorService(): SetorService {
+        return new SetorLixa(
+            this._metododealocacao,
+            this._metodoDeReAlocacao,
+        );
     }
 }

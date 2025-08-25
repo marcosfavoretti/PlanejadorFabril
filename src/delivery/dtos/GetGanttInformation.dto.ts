@@ -10,7 +10,7 @@ import {
   IsDate
 } from 'class-validator';
 
-export class GetGanttInformationDto {
+export class GanttData {
   @ApiPropertyOptional({ description: 'ID da tarefa' })
   @IsOptional()
   @IsString()
@@ -78,4 +78,27 @@ export class GetGanttInformationDto {
   @IsOptional()
   @IsInt()
   _index?: number;
+}
+
+export class GanttLegendaDto{
+  @ApiProperty()
+  @IsString()
+  legenda: string;
+
+  @ApiProperty()
+  @IsString()
+  cor: string;
+}
+export class GetGanttInformationDto {
+  @ApiProperty({
+    type: GanttData,
+    isArray: true
+  })
+  data: GanttData[];
+
+  @ApiProperty({
+    type: GanttLegendaDto,
+    isArray: true
+  })
+  legenda: GanttLegendaDto[]
 }
