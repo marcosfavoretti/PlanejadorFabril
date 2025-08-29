@@ -2,22 +2,29 @@
   "name": "planejamento-ethos",
   "version": "0.0.1",
   "description": "",
-  "author": "",
+  "author": "Marcos Favoretti Jr.",
+  
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
-    "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "dev-api": "nest start --watch planejamento-ethos",
+    "dev-job-import" : "nest start --watch importa-pedido",
+    "start:dev:env": "concurrently \"npm:dev-api\" \"npm:dev-job-import\" --prefix-colors cyan.bold,yellow.bold", 
+   "build": "nest build",
+    "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/apps/planejamento-ethos/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./apps/planejamento-ethos/test/jest-e2e.json"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -103,12 +110,17 @@
     },
     "collectCoverage": true,
     "moduleNameMapper": {
-      "^src/(.*)$": "<rootDir>src/$1",
-      "^@infra/(.*)$": "<rootDir>src/infra/$1",
       "^@config/(.*)$": "<rootDir>src/config/$1",
+      "^@infra/(.*)$": "<rootDir>src/infra/$1",
+      "^@lib/lib(|/.*)$": "<rootDir>/libs/lib/src/$1",
+      "^src/(.*)$": "<rootDir>src/$1",
       "^test/(.*)$": "<rootDir>test/$1"
     },
     "coverageDirectory": "<rootDir>/test/coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/apps/",
+      "<rootDir>/libs/"
+    ]
   }
 }

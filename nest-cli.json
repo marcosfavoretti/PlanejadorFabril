@@ -1,10 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
+  "sourceRoot": "apps/planejamento-ethos/src",
   "compilerOptions": {
     "deleteOutDir": true,
-     "assets": [
+    "assets": [
       {
         "include": "@files/*",
         "outDir": "dist/modules/@files"
@@ -14,7 +14,39 @@
         "outDir": "dist/modules/@sql"
       }
     ],
-    "watchAssets": true
+    "watchAssets": true,
+    "webpack": true,
+    "tsConfigPath": "apps/planejamento-ethos/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/planejamento-ethos",
+  "projects": {
+    "importa-pedido": {
+      "type": "application",
+      "root": "apps/importa-pedido",
+      "entryFile": "main",
+      "sourceRoot": "apps/importa-pedido/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/importa-pedido/tsconfig.app.json"
+      }
+    },
+    "lib": {
+      "type": "library",
+      "root": "libs/lib",
+      "entryFile": "index",
+      "sourceRoot": "libs/lib/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/lib/tsconfig.lib.json"
+      }
+    },
+    "planejamento-ethos": {
+      "type": "application",
+      "root": "apps/planejamento-ethos",
+      "entryFile": "main",
+      "sourceRoot": "apps/planejamento-ethos/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/planejamento-ethos/tsconfig.app.json"
+      }
+    }
   }
-  
 }

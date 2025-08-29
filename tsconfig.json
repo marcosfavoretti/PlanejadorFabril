@@ -4,8 +4,19 @@
     "declaration": true,
     "removeComments": true,
     "paths": {
-      "@sql/*": ["src/modules/@files/*"],
-      "@files/*": ["src/modules/@sql/*"]
+      "@files/*": [
+        "src/modules/@sql/*"
+      ],
+      "@libs/lib/*": [
+        "libs/lib/src/*"
+      ],
+      "@sql/*": [
+        "src/modules/@files/*"
+      ],
+      "@dto/*": [
+        "libs/lib/src/dtos/*"
+      ],
+      
     },
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
