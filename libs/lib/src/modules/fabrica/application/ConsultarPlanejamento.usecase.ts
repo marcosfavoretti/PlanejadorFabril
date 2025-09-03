@@ -1,4 +1,4 @@
-import { Inject } from "@nestjs/common";
+import { Inject, InternalServerErrorException } from "@nestjs/common";
 import { ConsultaPlanejamentoService } from "../infra/service/ConsultaPlanejamentos.service";
 import { ConsultaPlanejamentosDTO } from "@dto/ConsultaPlanejamentos.dto";
 import { FabricaService } from "../infra/service/Fabrica.service";
@@ -13,19 +13,24 @@ export class ConsultarPlanejamentosUseCase {
     ) { }
 
     async consultar(dto: ConsultaPlanejamentosDTO): Promise<PlanejamentoResponseDTO[]> {
-        const fabrica = await this.fabricaService.consultaFabrica(dto.fabricaId);
-        const planejamentos = await this.consultaPlanejamento.consultaPlanejamentoDia(
-            fabrica,
-            parse(dto.dataInicial, 'dd-MM-yyyy', new Date()),
-            new PlanejamentoOverWriteByPedidoService(),
-            dto?.dataFinal ? parse(dto.dataFinal, 'dd-MM-yyyy', new Date()) : undefined
-        );
-        return planejamentos
-            .sort(
-                (a, b) => a.planejamento.dia.getTime() - b.planejamento.dia.getTime()
-            )
-            .flatMap(
-                plan => PlanejamentoResponseDTO.fromEntity(plan.planejamento)
+        try {
+            const fabrica = await this.fabricaService.consultaFabrica(dto.fabricaId);
+            console.log(dto.dataFinal, dto.dataInicial)
+            const planejamentos = await this.consultaPlanejamento.consultaPlanejamentoDia(
+                fabrica,
+                dto.dataInicial,
+                new PlanejamentoOverWriteByPedidoService(),
+                dto?.dataFinal ? dto.dataFinal : undefined
             );
+            return planejamentos
+                .sort(
+                    (a, b) => a.planejamento.dia.getTime() - b.planejamento.dia.getTime()
+                )
+                .flatMap(
+                    plan => PlanejamentoResponseDTO.fromEntity(plan.planejamento)
+                );
+        } catch (error) {
+            throw new InternalServerErrorException(error.message)
+        }
     }
 }

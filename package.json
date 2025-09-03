@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "description": "",
   "author": "Marcos Favoretti Jr.",
-  
   "private": true,
   "license": "UNLICENSED",
   "engines": {
@@ -11,9 +10,9 @@
   },
   "scripts": {
     "dev-api": "nest start --watch planejamento-ethos",
-    "dev-job-import" : "nest start --watch importa-pedido",
-    "start:dev:env": "concurrently \"npm:dev-api\" \"npm:dev-job-import\" --prefix-colors cyan.bold,yellow.bold", 
-   "build": "nest build",
+    "dev-job-import": "nest start --watch importa-pedido",
+    "start:dev:env": "concurrently \"npm:dev-api\" \"npm:dev-job-import\" --prefix-colors cyan.bold,yellow.bold",
+    "build": "nest build",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -40,6 +39,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.5.0",
     "jsonwebtoken": "^9.0.2",
+    "mailgen": "^2.0.29",
     "mssql": "^11.0.1",
     "oracledb": "^6.9.0",
     "planejamento-ethos": "file:",

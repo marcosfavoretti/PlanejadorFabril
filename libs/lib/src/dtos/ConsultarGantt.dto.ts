@@ -8,7 +8,7 @@ export class ConsultarGanttDTO {
     fabricaId: string;
 
     @ApiProperty({
-        enum: OqColorirGantt
+        enum: OqColorirGantt,
     })
     @IsEnum(OqColorirGantt)
     colorir: OqColorirGantt;

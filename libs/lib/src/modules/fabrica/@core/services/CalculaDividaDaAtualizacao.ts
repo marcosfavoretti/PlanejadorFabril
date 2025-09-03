@@ -17,8 +17,9 @@ export class CalculaDividaDaAtualizacao implements ICalculoDivida {
     calc(): Partial<Divida>[] {
         const qtdAntes = this.props.planejamentoOrigial.qtd;
         const qtdAtual = this.props.planejamentoNovo.qtd;
-        console.log(this.props.planejamentoNovo, this.props.planejamentoOrigial)
+        console.log(qtdAntes - qtdAtual)
         return [{
+            item: this.props.planejamentoOrigial.item,
             pedido: this.props.pedido,
             qtd: qtdAntes - qtdAtual,
             setor: this.props.planejamentoOrigial.setor

@@ -6,12 +6,12 @@ export class ConsultaPlanejamentosDTO {
     @IsString()
     fabricaId: string;
 
-    @ApiProperty({ type: String, format: 'date', example: '07-07-2025', description: 'Formato: dd-MM-yyyy' })
+    @ApiProperty({ type: Date })
     @IsString()
-    dataInicial: string;
+    dataInicial: Date;
 
-    @ApiProperty({ type: String, nullable: true, required: false,  format: 'date', example: '07-07-2025', description: 'Formato: dd-MM-yyyy' })
+    @ApiProperty({ type: Date })
     @IsOptional()
     @IsString()
-    dataFinal?: string;
+    dataFinal?: Date;
 }

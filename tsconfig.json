@@ -4,6 +4,9 @@
     "declaration": true,
     "removeComments": true,
     "paths": {
+      "@dto/*": [
+        "libs/lib/src/dtos/*"
+      ],
       "@files/*": [
         "src/modules/@sql/*"
       ],
@@ -12,11 +15,7 @@
       ],
       "@sql/*": [
         "src/modules/@files/*"
-      ],
-      "@dto/*": [
-        "libs/lib/src/dtos/*"
-      ],
-      
+      ]
     },
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,

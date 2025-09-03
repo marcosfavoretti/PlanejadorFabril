@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ItemRepository } from "../repository/Item.repository";
 import { Item } from "../../@core/entities/Item.entity";
-import { In } from "typeorm";
+import { In, Like } from "typeorm";
 
 export class ItemService {
     constructor(
@@ -26,7 +26,12 @@ export class ItemService {
             }
         });
     }
+    
     async consultarTodosItens(): Promise<Item[]> {
-        return await this.itemRepository.find();
+        return await this.itemRepository.find({
+            where: {
+                Item: Like('%-000-%')
+            }
+        });
     }
 }

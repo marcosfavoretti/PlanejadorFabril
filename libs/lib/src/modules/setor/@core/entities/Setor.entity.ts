@@ -3,9 +3,15 @@ import { Column, Entity, PrimaryColumn } from "typeorm";
 
 @Entity()
 export class Setor {
-    @PrimaryColumn({ enum: CODIGOSETOR, type: 'varchar' })
+    @PrimaryColumn(
+        {
+            type: 'varchar',
+        })
     codigo: CODIGOSETOR;
 
-    @Column()
+    @Column({
+        nullable: false,
+        type: 'varchar'
+    })
     nome: string;
 }

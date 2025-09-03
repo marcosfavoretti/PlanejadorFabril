@@ -26,13 +26,17 @@ export class DividaSnapShot {
     copy(): DividaSnapShot {
         const novo = new DividaSnapShot();
         novo.tipo = this.tipo;
+        novo.fabrica = this.fabrica;
+        novo.origem = this.origem;
         novo.divida = this.divida;
+        console.log(this.divida)
         return novo;
     }
 
     deepCopy(): DividaSnapShot {
         const novo = new DividaSnapShot();
         novo.tipo = this.tipo;
+        novo.fabrica = this.fabrica;
         novo.divida = this.divida.copy();
         return novo;
     }

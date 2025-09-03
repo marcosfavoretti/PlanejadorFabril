@@ -9,7 +9,7 @@ export interface IGerenciadorPlanejamentoMutation {
     appendReplanejamento(fabrica: Fabrica, pedido: Pedido, planejamentosOriginais: PlanejamentoSnapShot[], planejamentosNovos: PlanejamentoTemporario[]): Promise<Planejamento[]>;
     removePlanejamento(
         fabrica: Fabrica,
-        planejamento: PlanejamentoSnapShot
+        planejamento: PlanejamentoSnapShot[]
     ): Promise<void>
 }
 

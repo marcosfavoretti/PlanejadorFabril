@@ -5,8 +5,13 @@ export class ColorGenerator {
   constructor() {
     // Paleta de cores bem distintas (24 cores)
     this.palette = [
+
+      // Tons mais suaves
+      "#add8e6", "#f0e68c", "#e0ffff", "#f5f5dc", "#d8bfd8",
+      "#ffe4e1", "#fafad2", "#e9967a", "#afeeee", "#eee8aa",
+      "#f5deb3", "#b0c4de", "#d3d3d3", "#f0fff0", "#ffe4b5",
       // Tons vibrantes
-      "#ffe119", "#0082c8", "#f58231",
+      "#ffe019ff", "#0082c8", "#f58231",
       "#911eb4", "#46f0f0", "#f032e6", "#d2f53c", "#fabebe",
       "#008080", "#e6beff", "#aa6e28", "#fffac8", "#800000",
       "#aaffc3", "#808000", "#ffd8b1", "#000080", "#808080",
@@ -17,11 +22,6 @@ export class ColorGenerator {
       "#ff69b4", "#cd5c5c", "#ffa07a", "#40e0d0", "#b0e0e6",
       "#ff1493", "#7fffd4", "#00ced1", "#1e90ff",
       "#00fa9a", "#ba55d3", "#9370db", "#3cb371",
-
-      // Tons mais suaves
-      "#add8e6", "#f0e68c", "#e0ffff", "#f5f5dc", "#d8bfd8",
-      "#ffe4e1", "#fafad2", "#e9967a", "#afeeee", "#eee8aa",
-      "#f5deb3", "#b0c4de", "#d3d3d3", "#f0fff0", "#ffe4b5",
 
       // Cores pastel variadas
       "#ffd1dc", "#c1f0f6", "#e2f0cb", "#ffefc1", "#f3c1ff",

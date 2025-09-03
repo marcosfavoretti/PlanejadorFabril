@@ -50,8 +50,6 @@ export abstract class MetodoDeAlocacao {
     ): Promise<PlanejamentoTemporario[]> {
         const itemContext = this.Itemselecionador.seleciona(props.estrutura);
         
-        console.log(itemContext);
-
         if(!itemContext) throw new Error('Não foi selecionado nenhuma item');
 
         const planejamento: PlanejamentoTemporario[] = [];

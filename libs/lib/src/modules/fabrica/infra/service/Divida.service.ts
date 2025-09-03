@@ -114,4 +114,13 @@ export class DividaService {
         return new DividaOverWriteByPedido().resolverOverwrite(dividas);
 
     }
+
+    async removerDividaNaFabricaDoPedido(fabrica: Fabrica, pedido: Pedido): Promise<void> {
+        const dividasNoBanco = await this.consultarDividaDoPedido(fabrica, pedido);
+        const dividasNoBancoCopia = dividasNoBanco.map(d=> d.copy());
+        const dividasNoBancoResolvidas = new DividaOverWriteByPedido().resolverOverwrite(dividasNoBancoCopia);
+        dividasNoBancoResolvidas.forEach(d=> d.tipo === SnapShotEstados.delete);
+        fabrica.appendDividas(dividasNoBancoResolvidas);
+        this.fabricaService.saveFabrica(fabrica);
+    }
 }

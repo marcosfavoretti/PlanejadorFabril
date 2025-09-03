@@ -13,8 +13,6 @@ import { Fabrica } from "@libs/lib/modules/fabrica/@core/entities/Fabrica.entity
 import { RealocacaoProps } from "@libs/lib/modules/fabrica/@core/classes/RealocacaoProps";
 import { Logger } from "@nestjs/common";
 import { RealocacaoParcial } from "../classes/RealocacaoParcial";
-import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
-import { ISelecionarItem } from "@libs/lib/modules/fabrica/@core/interfaces/ISelecionarItem";
 import { AlocacaoProps } from "@libs/lib/modules/fabrica/@core/classes/AlocacaoProps";
 
 
@@ -54,6 +52,8 @@ export abstract class SetorService implements ISetorChain {
             this.metodoAlocacao.verificacaoCapacidade(props.pedido, this.setor), //mal cheiro pq vejo o metodo de alocacao para fazer a realocacao
             realocacaoUltimoSetor
         );
+
+        console.log('ADICIONADO', doSetorAtual.adicionado)
 
         realocacaoAcumulada.adicionado.push(...doSetorAtual.adicionado)
         realocacaoAcumulada.retirado.push(...doSetorAtual.retirado);

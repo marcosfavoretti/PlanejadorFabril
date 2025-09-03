@@ -11,6 +11,7 @@ export class CalculaDividaPosPlanManual implements ICalculoDivida {
     calc(): Partial<Divida>[] {
         return [
             {
+                item: this.props.novoPlan.item,
                 pedido: this.props.novoPlan.pedido,
                 qtd: this.props.novoPlan.qtd * (this.props.modo === 'INSERCAO' ? -1 : 1),
                 setor: { codigo: this.props.novoPlan.setor, nome: '' }

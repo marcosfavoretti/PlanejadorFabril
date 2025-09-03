@@ -22,7 +22,7 @@ export class FabricaResponseDto {
         dto.date = entity.date;
         dto.principal = entity.principal;
         dto.checkPoint = entity.checkPoint;
-        dto.autor = entity.user.name || 'unkown';
+        dto.autor = entity.user?.name || 'unkown';
         // Mapeia o fabricaPaiId para a propriedade fabricaPai no DTO
         dto.fabricaPai = entity.fabricaPai?.fabricaId || null;
         return dto;

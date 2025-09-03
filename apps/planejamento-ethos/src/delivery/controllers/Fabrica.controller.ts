@@ -31,6 +31,10 @@ import { ReplanejarPedidoDTO } from "@dto/ReplanejarPedido.dto";
 import { NaPrincipalNao } from "@libs/lib/modules/fabrica/@core/guard/na-princiapal-nao.guard";
 import { DesplanejarPedidoUseCase } from "@libs/lib/modules/fabrica/application/DesplanejarPedido.usecase";
 import { DesplanejarPedidoDto } from "@libs/lib/dtos/DesplanejarPedido.dto";
+import { MergeFabricaDto } from "@dto/MergeFabrica.dto";
+import { RequestFabricaMergeUseCase } from "@libs/lib/modules/fabrica/application/RequestFabricaMerge.usecase";
+import { ConsultaMergeRequestUseCase } from "@libs/lib/modules/fabrica/application/ConsultaMergeRequest.usecase";
+import { MergeRequestPendingDto } from "@dto/MergeRequestRes.dto";
 
 @UseGuards(
     JwtGuard
@@ -173,16 +177,46 @@ export class FabricaController {
     @ApiResponse({
         type: FabricaResponseDto,
     })
-    @UseGuards(DonoDaFabricaGuard)
     @Post('/merge')
     async mergeFabricaMethod(
-        @Body() payload: ConsutlarFabricaDTO
+        @Body() payload: MergeFabricaDto,
+        @Req() req: CustomRequest
     ): Promise<FabricaResponseDto> {
-        return await this.mergeFabricaUseCase.merge(payload);
+        return await this.mergeFabricaUseCase.merge({
+            dto: payload,
+            user: req.user
+        });
     }
 
+    @Inject(RequestFabricaMergeUseCase) private requestFabricaMergeUseCase: RequestFabricaMergeUseCase;
+    @ApiResponse({
+        type: FabricaResponseDto,
+    })
+    @UseGuards(DonoDaFabricaGuard, NaPrincipalNao)
+    @Post('/merge/request')
+    async requestFabricaMergeMethod(
+        @Body() payload: ConsutlarFabricaDTO,
+        @Req() req: CustomRequest
+    ): Promise<void> {
+        return await this.requestFabricaMergeUseCase.request({
+            dto: payload,
+            user: req.user
+        });
+    }
+
+
+    @Inject(ConsultaMergeRequestUseCase) private consultaMergeRequestUseCase: ConsultaMergeRequestUseCase;
+    @ApiResponse({
+        type: () => MergeRequestPendingDto,
+    })
+    @Get('/merge/request')
+    async getRequestsFabricaMergeMethod(): Promise<MergeRequestPendingDto[]> {
+        return await this.consultaMergeRequestUseCase.consultar();
+    }
+
+
     @Inject(ReplanejarPedidoUseCase) private replanejarPedidoUseCase: ReplanejarPedidoUseCase;
-    @UseGuards(NaPrincipalNao)
+    // @UseGuards(NaPrincipalNao)
     @Post('/fabrica/replanejamento')
     async ReplanejarPedidoUseCase(
         @Body() payload: ReplanejarPedidoDTO,
@@ -191,7 +225,10 @@ export class FabricaController {
     }
 
     @Inject(DesplanejarPedidoUseCase) private desplanejarPedidoUseCase: DesplanejarPedidoUseCase;
-    @UseGuards(NaPrincipalNao, DonoDaFabricaGuard)
+    @UseGuards(
+        //    NaPrincipalNao,
+        DonoDaFabricaGuard
+    )
     @Delete('/fabrica/pedido')
     async desplanejarPedidoNaFabricaMethod(
         @Body() payload: DesplanejarPedidoDto,
@@ -200,7 +237,7 @@ export class FabricaController {
     }
 
     @Inject(DeletarFabricaUseCase) private deletarFabricaUseCase: DeletarFabricaUseCase;
-    @UseGuards(DonoDaFabricaGuard)
+    @UseGuards(DonoDaFabricaGuard, NaPrincipalNao)
     @Delete('/fabrica')
     async deletarFabricaMethod(
         @Body() payload: ConsutlarFabricaDTO,

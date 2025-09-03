@@ -45,7 +45,7 @@ export class Calendario implements IDiasPossiveis {
         return datefns.startOfDay(dia);
     }
 
-    
+
 
     proximoDiaUtilReplanejamento(dia: Date): Date {
         const amanha = datefns.startOfTomorrow();
@@ -77,6 +77,9 @@ export class Calendario implements IDiasPossiveis {
     }
 
 
+    addBusinessDays(date: Date, sub: number): Date {
+        return datefns.addBusinessDays(date, sub);
+    }
     addDays(date: Date, sub: number): Date {
         return datefns.addDays(date, sub);
     }

@@ -2,210 +2,141 @@ import { Inject, Logger } from "@nestjs/common";
 import { Pedido } from "../../../pedido/@core/entities/Pedido.entity";
 import { IGerenciadorPlanejamentoMutation } from "../../@core/interfaces/IGerenciadorPlanejamento";
 import { Fabrica } from "@libs/lib/modules/fabrica/@core/entities/Fabrica.entity";
-import { Planejamento } from "@libs/lib/modules/planejamento/@core/entities/Planejamento.entity";
 import { FabricaPlanejamentoResultado } from "../../@core/classes/FabricaPlanejamentoResultado";
-import { Divida } from "../../@core/entities/Divida.entity";
 import { ErroDeValidacao } from "../../@core/exception/ErroDeValidacao.exception";
-import { CalculaDividaDoPlanejamento } from "../../@core/services/CalculaDividaDoPlanejamento";
-import { GerenciaDividaService } from "./GerenciaDivida.service";
 import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/classes/PlanejamentoTemporario";
-import { isAfter, isBefore, startOfTomorrow } from "date-fns";
+import { isAfter, isBefore, isSameDay, startOfTomorrow } from "date-fns";
 import { ConsultaPlanejamentoService } from "./ConsultaPlanejamentos.service";
 import { PlanejamentoOverWriteByPedidoService } from "../../@core/services/PlanejamentoOverWriteByPedido.service";
 import { Calendario } from "@libs/lib/modules/shared/@core/classes/Calendario";
 import { SetorChainFactoryService } from "../../@core/services/SetorChainFactory.service";
-import { TabelaProducao } from "@libs/lib/modules/planejamento/@core/entities/TabelaProducao.entity";
-import { TabelaProducaoRepository } from "@libs/lib/modules/planejamento/infra/repositories/TabelaProducao.repository";
-import { Repository } from "typeorm";
 import { IConsultarRoteiroPrincipal } from "../../@core/interfaces/IConsultarRoteiroPrincipal";
-import { IBuscarItemDependecias } from "@libs/lib/modules/item/@core/interfaces/IBuscarItemDependecias";
 import { SetorService } from "@libs/lib/modules/planejamento/@core/abstract/SetorService";
 import { IConsultaRoteiro } from "../../@core/interfaces/IConsultaRoteiro";
 import { AlocaItensDependencias } from "@libs/lib/modules/planejamento/@core/services/AlocaItensDependencias";
 import { SelecionaItemDep } from "../../@core/classes/SelecionaItemDep";
 import { IGerenciadorPlanejamentConsulta } from "../../@core/interfaces/IGerenciadorPlanejamentoConsulta";
+import { IMontaEstrutura } from "../../@core/interfaces/IMontaEstrutura.ts";
+import { FabricaReplanejamentoResultado } from "../../@core/classes/FabricaReplanejamentoResultado";
+import { ItemEstruturado } from "../../@core/classes/ItemEstruturado";
 
 export class FabricaSimulacaoService {
 
     constructor(
-        @Inject(IBuscarItemDependecias) private buscarDependencias: IBuscarItemDependecias,
+        @Inject(IMontaEstrutura) private montaEstruturaEstrategia: IMontaEstrutura,
         @Inject(IConsultaRoteiro) private consultaRoteiro: IConsultaRoteiro,
         @Inject(IConsultarRoteiroPrincipal) private consultaRoteiroPrincipal: IConsultarRoteiroPrincipal,
-        @Inject(GerenciaDividaService) private gerenciaDividaService: GerenciaDividaService,
         @Inject(ConsultaPlanejamentoService) private consultaPlanejamentoService: ConsultaPlanejamentoService,
         @Inject(SetorChainFactoryService) private setorChainFactoryService: SetorChainFactoryService,
-        @Inject(TabelaProducaoRepository) private tabelaRepo: Repository<TabelaProducao>,
         @Inject(IGerenciadorPlanejamentoMutation) private readonly gerenciadorPlanejamento: IGerenciadorPlanejamentoMutation & IGerenciadorPlanejamentConsulta
     ) { }
 
     calendario = new Calendario();
     logger = new Logger();
 
-    async planejamento(fabrica: Fabrica, pedidos: Pedido[]): Promise<FabricaPlanejamentoResultado> {
-        const planDiario: Planejamento[] = [];
-        const dividas: Divida[] = [];
 
-        if (!pedidos || pedidos.length === 0) {
-            return { divida: [], planejamentos: [] };
-        }
+    async planejamento(fabrica: Fabrica, pedido: Pedido): Promise<FabricaPlanejamentoResultado> {
+        const planejamentosTemporarios: PlanejamentoTemporario[] = [];
 
         try {
-            for (const pedido of pedidos) {
+            const estrutura = await this.montaEstruturaEstrategia.monteEstrutura(pedido.item);
+            this.logger.log(estrutura);
 
-                const itensDepedencias = await this.buscarDependencias.buscar(pedido.item);
+            // 1. Planejamento principal (já retorna o pipe também)
+            const { planInicial, pipePrincipal } = await this.alocaItemPrincipal(fabrica, pedido, estrutura);
+            planejamentosTemporarios.push(...planInicial);
 
-                console.log(itensDepedencias);
+            // 2. Ajusta range se necessário
+            const pivot = this.getPlanejamentoPivot(planInicial, pipePrincipal);
 
-                const roteiro = await this.consultaRoteiroPrincipal.roteiro(pedido.item, itensDepedencias);
-
-                const estrutura = itensDepedencias.concat(pedido.item);
-
-                console.log(`ROTEIRO PRINCIPAL ${roteiro}`);
-
-                const pipeDeSetoresCustom = this.setorChainFactoryService.modificarCorrente(roteiro);
-
-                console.log(estrutura.map(a=>a.getCodigo()))
-
-                const { acumulado: planInicial } = await pipeDeSetoresCustom.alocar({
+            if (pivot) {
+                const planoAjustado = await this.arrumaRangeDoPlanejamento({
                     fabrica,
                     pedido,
-                    estrutura
+                    pipeProducao: pipePrincipal,
+                    planPivot: pivot,
+                    planOriginal: planInicial
                 });
-
-                let acumuladoFinal: PlanejamentoTemporario[] = Array.isArray(planInicial)
-                    ? [...planInicial]
-                    : [];
-
-                const planejamentosEmDivida = planInicial
-                    .filter(plan => isBefore(plan.dia, startOfTomorrow()));
-
-                const planejamentosEmDividaASC = planejamentosEmDivida
-                    .filter(p => p.setor === pipeDeSetoresCustom.getSetorCode())
-                    .sort((a, b) => a.dia.getTime() - b.dia.getTime());
-
-                const planejamentoBase = planejamentosEmDividaASC[0];
-
-                // console.log('planejamentos em divida', planejamentosEmDivida.map(
-                //     d => ({
-                //         data: d.dia,
-                //         item: d.item.Item,
-                //         setor: d.setor
-                //     })
-                // ));
-
-                //caso a divida exista planejados que estao fora do range valido
-                if (planejamentosEmDivida.length && planejamentoBase) {
-                    acumuladoFinal = await this.arrumaRangeDoPlanejamento({
-                        fabrica: fabrica,
-                        pedido: pedido,
-                        pipeProducao: pipeDeSetoresCustom,
-                        planBase: planejamentoBase,
-                        planOriginal: planInicial
-                    });
-                }
-
-                //->
-                if (itensDepedencias.length > 0) {
-                    for (const item of itensDepedencias) { // percorre todos
-                        const setoresDoItem = await this.consultaRoteiro.roteiro(item);
-
-                        const pipeDependenciasCustom = this.setorChainFactoryService.modificarCorrente(setoresDoItem);
-
-                        this.setorChainFactoryService.setMetodoDeAlocacaoCustomTodos(
-                            pipeDependenciasCustom,
-                            setoresDoItem,
-                            new AlocaItensDependencias(
-                                this.gerenciadorPlanejamento,
-                                new SelecionaItemDep()
-                            )
-                        );
-
-                        const { acumulado: acumuladoDeps } = await pipeDependenciasCustom.alocar({
-                            fabrica,
-                            pedido,
-                            estrutura: itensDepedencias,
-                            planBase: acumuladoFinal
-                        });
-
-                        itensDepedencias.pop();
-
-                        acumuladoFinal.push(...acumuladoDeps);
-                    }
-                }
-
-                console.log(planInicial.sort((a, b) => a.dia.getTime() - b.dia.getTime()).map(a => a.dia.toLocaleDateString()))
-
-                console.log(acumuladoFinal.sort((a, b) => a.dia.getTime() - b.dia.getTime()).map(a => a.dia.toLocaleDateString()))
-
-                const dividasSalvas = await this.gerenciaDividaService.resolverDividasParaSalvar(
-                    fabrica,
-                    pedido,
-                    new CalculaDividaDoPlanejamento({
-                        planejamentos: acumuladoFinal,
-                        pedido,
-                    })
-                );
-
-                //corto os dias que estao fora do range de data e ja foram contabilizados como dividas
-                acumuladoFinal = acumuladoFinal.filter(plan =>
-                    !isBefore(plan.dia, startOfTomorrow()) && // plan.dia >= amanhã
-                    !isAfter(plan.dia, plan.pedido.getSafeDate()) // plan.dia <= safeDate
-                );
-
-                //salvo no banco meus planejamentos
-                const planejamentosDoPedido = await this.gerenciadorPlanejamento
-                    .appendPlanejamento(fabrica, pedido, acumuladoFinal);
-                //
-
-                dividas.push(...dividasSalvas);
-                planDiario.push(...planejamentosDoPedido);
+                planejamentosTemporarios.splice(0, planejamentosTemporarios.length, ...planoAjustado);
             }
 
-            //da para jogar em um servico para encapsular isso
-            const tabelas: TabelaProducao[] = planDiario
-                .map(planejamento =>
-                    this.tabelaRepo.create({
-                        datePlanej: planejamento.dia,
-                        planejamento: planejamento,
-                    })
-                );
+            // 3. Dependências
+            if (estrutura.itensDependencia.length > 0) {
+                const plansDeps = await this.alocaDependencias(fabrica, pedido, estrutura, planejamentosTemporarios);
+                planejamentosTemporarios.push(...plansDeps);
+            }
 
-            await this.tabelaRepo.save(tabelas);
-
-            return {
-                divida: dividas,
-                planejamentos: planDiario,
-            };
+            return { planejamentos: planejamentosTemporarios };
         }
         catch (error) {
             console.error('[planejamento] erro geral ao processar pedidos', { error });
-            if (error instanceof ErroDeValidacao) {
-                throw error;
-            }
+            if (error instanceof ErroDeValidacao) throw error;
             const msg = error instanceof Error ? error.message : String(error);
             throw new Error(`problema ao salvar planejamentos temporarios: ${msg}`);
         }
     }
 
-    private async arrumaRangeDoPlanejamento(props: { fabrica: Fabrica, pedido: Pedido, planOriginal: PlanejamentoTemporario[], planBase: PlanejamentoTemporario, pipeProducao: SetorService, }): Promise<PlanejamentoTemporario[]> {
-        this.logger.log('DIVIDA NO PLANEJAMENTO');
-        const targetSetor = props.pipeProducao.getSetorInChain(props.planBase.setor);
-
-        const { adicionado: realocacao, retirado } = await targetSetor.realocar(
-            props.fabrica,
-            {
-                pedido: props.pedido,
-                novaData: this.calendario.proximoDiaUtilReplanejamento(props.planBase.dia),
-                planejamentoFalho: props.planBase,
-                planejamentoPedido: props.planOriginal,
-            }
-        );
-        return realocacao;
+    private async gerarPipeDeProducao(estrutura: ItemEstruturado): Promise<SetorService> {
+        const roteiro = await this.consultaRoteiroPrincipal.roteiro(estrutura);
+        return this.setorChainFactoryService.modificarCorrente(roteiro);
     }
 
-    async replanejar(fabrica: Fabrica, planejamentosFalhos: PlanejamentoTemporario[], novaData?: Date): Promise<FabricaPlanejamentoResultado> {
-        const planDiario: Planejamento[] = [];
-        const dividas: Divida[] = [];
+    private async alocaItemPrincipal(
+        fabrica: Fabrica,
+        pedido: Pedido,
+        estrutura: any
+    ): Promise<{ planInicial: PlanejamentoTemporario[], pipePrincipal: SetorService }> {
+        const pipe = await this.gerarPipeDeProducao(estrutura)
+
+        const { acumulado } = await pipe.alocar({ fabrica, pedido, estrutura });
+        return { planInicial: acumulado, pipePrincipal: pipe };
+    }
+
+    private getPlanejamentoPivot(
+        planInicial: PlanejamentoTemporario[],
+        pipe: SetorService
+    ): PlanejamentoTemporario | null {
+        const foraDoRange = this.selecionaPlansForaDoRange(planInicial);
+        const foraDoRangeAsc = this.organizaPlansOrdemCronologica(planInicial, pipe);
+        return foraDoRange.length ? foraDoRangeAsc[0] : null;
+    }
+
+    private async alocaDependencias(
+        fabrica: Fabrica,
+        pedido: Pedido,
+        estrutura: any,
+        planejamentosTemporarios: PlanejamentoTemporario[]
+    ): Promise<PlanejamentoTemporario[]> {
+        const acumulados: PlanejamentoTemporario[] = [];
+
+        for (const item of [...estrutura.itensDependencia]) {
+            estrutura.ordenaDependencias(item);
+
+            const setoresDoItem = await this.consultaRoteiro.roteiro(item);
+            const pipe = this.setorChainFactoryService.modificarCorrente(setoresDoItem);
+
+            this.setorChainFactoryService.setMetodoDeAlocacaoCustomTodos(
+                pipe,
+                setoresDoItem,
+                new AlocaItensDependencias(this.gerenciadorPlanejamento, new SelecionaItemDep())
+            );
+
+            const { acumulado } = await pipe.alocar({
+                fabrica,
+                pedido,
+                estrutura,
+                planBase: planejamentosTemporarios
+            });
+
+            acumulados.push(...acumulado);
+        }
+        return acumulados;
+    }
+
+    async replanejar(fabrica: Fabrica, planejamentosFalhos: PlanejamentoTemporario[], novaData?: Date):
+        Promise<FabricaReplanejamentoResultado> {
+        const planejamentosTemporarios: PlanejamentoTemporario[] = [];
+        const planejamentosTemporariosRetirados: PlanejamentoTemporario[] = [];
 
         try {
             for (const realocacao of planejamentosFalhos) {
@@ -214,11 +145,14 @@ export class FabricaSimulacaoService {
                 const planejamentosDoPedidoEmBanco = await this.consultaPlanejamentoService
                     .consultaPorPedido(fabrica, [realocacao.pedido], new PlanejamentoOverWriteByPedidoService());
 
-                const planejamentosAlvos = planejamentosDoPedidoEmBanco.filter(plan => isAfter(plan.planejamento.dia, realocacao.dia));
+                const planejamentosAlvos = planejamentosDoPedidoEmBanco.filter(plan =>
+                    isSameDay(plan.planejamento.dia, realocacao.dia) ||
+                    isAfter(plan.planejamento.dia, realocacao.dia)
+                );
 
-                const depedencias = await this.buscarDependencias.buscar(realocacao.pedido.item);
+                const estrutura = await this.montaEstruturaEstrategia.monteEstrutura(realocacao.pedido.item);
 
-                const roteiro = await this.consultaRoteiroPrincipal.roteiro(realocacao.pedido.item, depedencias);
+                const roteiro = await this.consultaRoteiroPrincipal.roteiro(estrutura);
 
                 const pipeSetoresCustom = this.setorChainFactoryService
                     .modificarCorrente(roteiro);
@@ -234,39 +168,15 @@ export class FabricaSimulacaoService {
                     planejamentoPedido: planejamentosAlvos.map(p => PlanejamentoTemporario.createByEntity(p)),
                 });
 
-                //calculo se teve divida & salvamento
-                const dividasSalvas = await this.gerenciaDividaService
-                    .resolverDividasParaSalvar(
-                        fabrica,
-                        realocacao.pedido,
-                        new CalculaDividaDoPlanejamento({
-                            planejamentos: adicionado,
-                            pedido: realocacao.pedido
-                        })
-                    );
-
                 //salvamento do planejamento & validacao final
                 console.log('RESULTA FINAL', adicionado);
-
-                const planejamentosDoPedido = await this.gerenciadorPlanejamento
-                    .appendReplanejamento(fabrica, realocacao.pedido, planejamentosAlvos, adicionado);
-                //
-
-                for (const plan_retirado of retirado) {
-                    if (plan_retirado.planejamentoSnapShotId) {
-                        const planSnapshot = await this.consultaPlanejamentoService.consultaPlanejamentoSnapShot(plan_retirado.planejamentoSnapShotId!);
-                        await this.gerenciadorPlanejamento.removePlanejamento(fabrica, planSnapshot);
-                    }
-                }
-
-                dividas.push(...dividasSalvas);
-
-                planDiario.push(...planejamentosDoPedido);
-                //
+                //\\
+                planejamentosTemporarios.push(...adicionado);
+                planejamentosTemporariosRetirados.push(...retirado);
             }
             return {
-                divida: dividas,
-                planejamentos: planDiario
+                planejamentos: planejamentosTemporarios,
+                retirado: planejamentosTemporariosRetirados,
             }
         }
         catch (error) {
@@ -278,4 +188,41 @@ export class FabricaSimulacaoService {
         }
     }
 
+
+    private organizaPlansOrdemCronologica(planejamentos: PlanejamentoTemporario[], pipeSetores: SetorService): PlanejamentoTemporario[] {
+        const planejamentosForaDoRangeASC = planejamentos
+            .filter(p => p.setor === pipeSetores.getSetorCode())
+            .sort((a, b) => a.dia.getTime() - b.dia.getTime());
+        return planejamentosForaDoRangeASC;
+
+    }
+
+    private selecionaPlansForaDoRange(planejamentos: PlanejamentoTemporario[]): PlanejamentoTemporario[] {
+        const planejamentosForaDoRange = planejamentos.filter(plan => isBefore(plan.dia, startOfTomorrow()));
+        return planejamentosForaDoRange;
+    }
+
+    private async arrumaRangeDoPlanejamento(props: {
+        fabrica: Fabrica,
+        pedido: Pedido,
+        planOriginal: PlanejamentoTemporario[],
+        planPivot: PlanejamentoTemporario,
+        pipeProducao: SetorService
+    }): Promise<PlanejamentoTemporario[]> {
+        //
+        this.logger.log('DIVIDA NO PLANEJAMENTO');
+
+        const primeiroSetorDoPipe = props.pipeProducao.getSetorInChain(props.planPivot.setor);
+
+        const { adicionado: realocacao } = await primeiroSetorDoPipe.realocar(
+            props.fabrica,
+            {
+                pedido: props.pedido,
+                novaData: this.calendario.proximoDiaUtilReplanejamento(props.planPivot.dia),
+                planejamentoFalho: props.planPivot,
+                planejamentoPedido: props.planOriginal,
+            }
+        );
+        return realocacao;
+    }
 }

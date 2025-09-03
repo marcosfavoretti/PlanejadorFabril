@@ -7,10 +7,6 @@ export class GetTabelaProducaoDiarioDTO {
     @IsNumber()
     tabelaProducaoId: number;
 
-    @ApiProperty()
-    @IsDate()
-    datePlanej: Date;
-
 
     @ApiProperty()
     @IsString()

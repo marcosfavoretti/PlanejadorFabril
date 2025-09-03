@@ -6,8 +6,8 @@ export class TabelaProducao {
   @PrimaryGeneratedColumn()
   tabelaProducaoId: number;
 
-  @Column({ type: 'datetime' })
-  datePlanej: Date;
+  // @Column({ type: 'datetime' })
+  // datePlanej: Date;
 
   @ManyToOne(() => Planejamento)
   @JoinColumn({name: 'planejamentoId'})

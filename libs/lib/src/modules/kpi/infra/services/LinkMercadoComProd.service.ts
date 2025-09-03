@@ -23,12 +23,12 @@ export class LinkMercadoComProdService {
                         item: partcode,
                         operacao: mercado.getSetor().codigo,
                         planejado: tabelaProducao.find(
-                            t => t.datePlanej.getTime() === dia.getTime() &&
+                            t => t.planejamento.dia.getTime() === dia.getTime() &&
                                 t.planejamento.item.getCodigo() === partcode &&
                                 t.planejamento.setor.codigo === mercado.getSetor().codigo
                         )?.planejamento.qtd || 0,
                         produzido: tabelaProducao.find(
-                            t => t.datePlanej.getTime() === dia.getTime() &&
+                            t => t.planejamento.dia.getTime() === dia.getTime() &&
                                 t.planejamento.item.getCodigo() === partcode &&
                                 t.planejamento.setor.codigo === mercado.getSetor().codigo
                         )?.produzido || 0,

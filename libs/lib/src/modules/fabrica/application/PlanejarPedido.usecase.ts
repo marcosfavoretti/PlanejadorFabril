@@ -5,14 +5,24 @@ import { ForkFabricaService } from "../infra/service/ForkFabrica.service";
 import { InputPedidosDTO } from "@libs/lib/dtos/InputPedidos.dto";
 import { PedidoService } from "@libs/lib/modules/pedido/infra/service/Pedido.service";
 import { IUserService } from "@libs/lib/modules/user/@core/abstract/IUserService";
+import { IGerenciadorPlanejamentoMutation } from "../@core/interfaces/IGerenciadorPlanejamento";
+import { Fabrica } from "../@core/entities/Fabrica.entity";
+import { OnNovoPlanejamento } from "../OnNovoPlanejamento.provider";
+import { IOnNovoPlanejamentos } from "../@core/interfaces/IOnNovoPlanejamento";
+import { GerenciaDividaService } from "../infra/service/GerenciaDivida.service";
+import { CalculaDividaDoPlanejamento } from "../@core/services/CalculaDividaDoPlanejamento";
 
 
 export class PlanejarPedidoUseCase {
 
-    @Inject(IUserService) private userService: IUserService;
     @Inject(ForkFabricaService) private forkFabricaService: ForkFabricaService;
-    @Inject(FabricaService) private fabricaService: FabricaService;
     @Inject(FabricaSimulacaoService) private fabricaSimulacaoService: FabricaSimulacaoService;
+    @Inject(GerenciaDividaService) private gerenciaDividaService: GerenciaDividaService;
+    @Inject(OnNovoPlanejamento) private onNovoPlanejamento: IOnNovoPlanejamentos[];
+    //deps de consulta & salvmentos
+    @Inject(IGerenciadorPlanejamentoMutation) private gerenciadorPlanejamentoMutation: IGerenciadorPlanejamentoMutation
+    @Inject(IUserService) private userService: IUserService;
+    @Inject(FabricaService) private fabricaService: FabricaService;
     @Inject(PedidoService) private pedidoService: PedidoService;
 
     async planeje(dto: InputPedidosDTO): Promise<void> {
@@ -26,31 +36,50 @@ export class PlanejarPedidoUseCase {
 
             // if (!pedidos.length || dto.pedidoIds.length !== pedidos.length || pedidos.some(p => p.processado)) throw new Error('pedido invalidos');
 
-            const fabricaAlvo = await this.fabricaService.consultaFabricaPrincipal();
+            const fabricaPrincipal = await this.fabricaService.consultaFabricaPrincipal();
 
-            if (!fabricaAlvo) throw new Error('Não foi encontrado a fabrica principal');
+            if (!fabricaPrincipal) throw new Error('Não foi encontrado a fabrica principal');
 
             const user = await this.userService.systemAuth();
 
             const fabricaNovaParaMudanca = await this.forkFabricaService.fork({
                 user: user,
-                fabrica: fabricaAlvo,
+                fabrica: fabricaPrincipal,
                 isPrincipal: true
             });
 
-            const fabricaNovaSalva = await this.fabricaService.saveFabrica(fabricaNovaParaMudanca);
-
-            const { planejamentos, divida } = await this.fabricaSimulacaoService.planejamento(fabricaNovaSalva, pedidos);
+            let fabricaVersionada: Fabrica | undefined = undefined;
 
             //salvamento do pedido//
-
-            //criacao da tabela de itens producao//
-
-            //calculo de dividas//
+            for (const pedido of pedidos) {
+                //requisao para alocacao do pedido
+                const { planejamentos: planejamentosTemporarios } = await this.fabricaSimulacaoService.planejamento(fabricaPrincipal, pedido);
+                //
+                //criacao efetiva de uma nova fabrica para versionar todos esse planejados
+                if (!fabricaVersionada) {
+                    fabricaVersionada = await this.fabricaService.saveFabrica(fabricaNovaParaMudanca);
+                }
+                //
+                //salvamento do pedido
+                const planejamentos = await this.gerenciadorPlanejamentoMutation.appendPlanejamento(fabricaVersionada, pedido, planejamentosTemporarios);
+                //
+                //rodar dividas | salvamento da tabela vai ser feito em outro servico apenas na hora de avaliar a producao diaria
+                //faltando codigo
+                await this.gerenciaDividaService.resolverDividasParaSalvar(
+                    fabricaVersionada!,
+                    pedido,
+                    new CalculaDividaDoPlanejamento({
+                        pedido: pedido,
+                        planejamentos: planejamentosTemporarios
+                    }));
+                //
+                //roda eventos de pos planejamentos
+                const promises = this.onNovoPlanejamento.map(on => on.execute(fabricaVersionada!, planejamentos));
+                await Promise.all(promises);
+                //
+                pedido.processaPedido();
+            }
             
-            
-            pedidos.map(pedido => pedido.processaPedido());
-
             await this.pedidoService.savePedido(pedidos);
         } catch (error) {
             console.error(error)

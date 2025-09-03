@@ -11,6 +11,7 @@ export class ConsutlarFabricaPrincipalAtualUseCase {
             if (!fabricaPrincipal) throw new Error('Não foi possível encontrar a fabrica principal');
             return FabricaResponseDto.fromEntity(fabricaPrincipal);
         } catch (error) {
+            console.error(error);
             throw new InternalServerErrorException(error);
         }
     }

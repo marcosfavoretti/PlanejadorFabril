@@ -1,11 +1,11 @@
 import { InjectDataSource } from "@nestjs/typeorm";
 import { DataSource } from "typeorm";
-import { PedidoLogixDTO } from "../../@core/dto/PedidoLogix.dto";
+import { PedidoLogixDTO } from "../../@core/classes/PedidoLogix.dto";
 import { addYears, format } from "date-fns";
 
 export class PedidoLogixDAO {
     constructor(
-        @InjectDataSource() private dtMainDB: DataSource
+        @InjectDataSource('SYNECO_DB') private dtMainDB: DataSource
     ) { }
 
     async search(dataCorte: Date): Promise<PedidoLogixDTO[]> {

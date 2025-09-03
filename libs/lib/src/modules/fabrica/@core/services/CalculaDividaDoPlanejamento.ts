@@ -13,11 +13,11 @@ export class CalculaDividaDoPlanejamento implements ICalculoDivida {
   constructor(private props: CalculaDividaDoPlanejamentoProps) { }
 
   calc(): Partial<Divida>[] {
-    const divida = this.props.planejamentos.filter(plan =>
-      isAfter(plan.dia, this.props.pedido.getSafeDate())
-    ); return divida.map(plan => ({
+    const divida = this.props.planejamentos.filter(plan => isAfter(plan.dia, this.props.pedido.getSafeDate()));
+    return divida.map(plan => ({
       pedido: this.props.pedido,
       qtd: plan.qtd,
+      item: plan.item,
       setor: { codigo: plan.setor, nome: '' }//IMPROVE
     }));
   }

@@ -1,7 +1,7 @@
 import { Pedido } from "@libs/lib/modules/pedido/@core/entities/Pedido.entity";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import { Fabrica } from "./Fabrica.entity";
 import { Setor } from "@libs/lib/modules/setor/@core/entities/Setor.entity";
+import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
 
 @Entity()
 export class Divida {
@@ -16,13 +16,18 @@ export class Divida {
     pedido: Pedido;
 
     @ManyToOne(() => Setor, { eager: true })
-    @JoinColumn({ name: 'setodId' })
+    @JoinColumn({ name: 'setorId' })
     setor: Setor;
+
+    @ManyToOne(() => Item)
+    @JoinColumn({name: 'Item'})
+    item: Item;
 
     // @Column({
     //     default: () => `DATETIME('now', 'localtime')`,
     //     type: 'datetime'
     // })
+
     @CreateDateColumn()
     createdAt: Date;
 

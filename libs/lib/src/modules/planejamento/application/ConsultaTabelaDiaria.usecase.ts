@@ -24,7 +24,6 @@ export class ConsultaTabelaDiariaUseCase {
                 return {
                     tabelaProducaoId: t.tabelaProducaoId,
                     produzido: t.produzido,
-                    datePlanej: t.datePlanej,
                     setor: t.planejamento.setor.codigo,
                     planejamento: t.planejamento.qtd,
                     item: t.planejamento.item.getCodigo()

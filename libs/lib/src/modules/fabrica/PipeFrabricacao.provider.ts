@@ -6,8 +6,10 @@ import { SetorPinturaLiq } from "../planejamento/@core/services/SetorPinturaliq"
 import { SetorPinturaPo } from "../planejamento/@core/services/SetorPinturaPo";
 import { SetorSolda } from "../planejamento/@core/services/SetorSolda";
 
+export const PIPE_FABRICACAO = Symbol('PIPE_FABRICACAO');
+
 export const PipeFrabricacaoProvider = {
-    provide: 'PIPE_FABRICACAO',
+    provide: PIPE_FABRICACAO,
     inject: [
         SetorSolda,
         SetorLixa,

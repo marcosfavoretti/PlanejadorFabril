@@ -28,7 +28,6 @@ import { DividaService } from "./infra/service/Divida.service";
 import { DividaRepository } from "./infra/repository/Divida.repository";
 import { ValidaCapacidade } from "./@core/services/ValidaCapacidade";
 import { PlanejamentoValidatorExecutorService } from "./@core/services/PlanejamentoValidatorExecutor.service";
-import { IValidaPlanejamento } from "./@core/interfaces/IValidaPlanejamento";
 import { ValidaData } from "./@core/services/ValidaData";
 import { SetorFabricaProviders } from "./SetorFabrica.provider";
 import { DividaSnapShotRepository } from "./infra/repository/DividaSnapShot.repository";
@@ -48,6 +47,14 @@ import { IConsultarRoteiroPrincipal } from "./@core/interfaces/IConsultarRoteiro
 import { RoteiroPrincipal } from "./infra/service/RoteiroPrinciapal.service";
 import { IBuscarItemDependecias } from "../item/@core/interfaces/IBuscarItemDependecias";
 import { BuscaPedidosService } from "./infra/service/BuscaPedidos.service";
+import { IMontaEstrutura } from "./@core/interfaces/IMontaEstrutura.ts";
+import { OnNovoPlanejamentoProvider } from "./OnNovoPlanejamento.provider";
+import { ValidadorPlanejamento, ValidadorPlanejamentoProvider } from "./ValidaPlenejamento.provider";
+import { ValidaFabricaProvider } from "./ValidaFabrica.provider";
+import { ValidaFabricaPai } from "./infra/service/ValidaFabricaPai.service";
+import { ValidaFabricaPlanejamento } from "./infra/service/ValidaFabricaPlanejamento.service";
+import { MergeRequestService } from "./infra/service/MergeRequest.service";
+import { MergeRequestRepository } from "./infra/repository/MergeRequest.repository";
 
 @Module({
     imports: [
@@ -56,6 +63,13 @@ import { BuscaPedidosService } from "./infra/service/BuscaPedidos.service";
         ItemServiceModule,
     ],
     providers: [
+        MergeRequestService,
+        ValidaFabricaPai,
+        ValidaFabricaPlanejamento,
+        ValidaFabricaProvider,
+        ValidadorPlanejamentoProvider,
+        TabelaProducaoService,
+        OnNovoPlanejamentoProvider,
         ...SetorFabricaProviders,
         RealocaPorCapabilidade,
         AlocaPorBatelada,
@@ -66,7 +80,6 @@ import { BuscaPedidosService } from "./infra/service/BuscaPedidos.service";
         VirtualDateRepository,
         VirtualDateService,
         MercadoSnapShotService,
-        TabelaProducaoService,
         DeletaSnapShotService,
         PlanejamentoRepository,
         PipeFrabricacaoProvider,
@@ -77,6 +90,10 @@ import { BuscaPedidosService } from "./infra/service/BuscaPedidos.service";
         DividaCheckPoint,
         PlanejamentoValidatorExecutorService,
         ValidaData,
+        {
+            provide: IMontaEstrutura,
+            useClass: EstruturaNeo4jApiService
+        },
         {
             provide: IConsultaRoteiro,
             useClass: EstruturaNeo4jApiService
@@ -106,21 +123,6 @@ import { BuscaPedidosService } from "./infra/service/BuscaPedidos.service";
             useClass: SyncMercadoManual
         },
         {
-            provide: IValidaPlanejamento,
-            useFactory: (
-                //   validaCapacidade: IValidaPlanejamento,
-                validaData: IValidaPlanejamento
-            ) => [
-
-                    //validaCapacidade,
-                    validaData
-                ],
-            inject: [
-                //    ValidaCapacidade,
-                ValidaData
-            ]
-        },
-        {
             provide: 'CHECKPOINT_SERVICES',
             useFactory: (planejamentoCheckPoint: IGeraCheckPoint, dividaCheckPoint: IGeraCheckPoint) => [planejamentoCheckPoint, dividaCheckPoint],
             inject: [PlanejamentoCheckPoint, DividaCheckPoint],
@@ -138,8 +140,16 @@ import { BuscaPedidosService } from "./infra/service/BuscaPedidos.service";
         GerenciaDividaService,
         DividaSnapShotRepository,
         ReplanejarPedidoUseCase,
+        MergeRequestRepository,
     ],
     exports: [
+        MergeRequestService,
+        MergeRequestRepository,
+        ValidadorPlanejamento,
+        ValidaFabricaPai,
+        ValidaFabricaPlanejamento,
+        ValidaFabricaProvider,
+        OnNovoPlanejamentoProvider,
         GerenciaDividaService,
         ReplanejarPedidoUseCase,
         IConverteItem,

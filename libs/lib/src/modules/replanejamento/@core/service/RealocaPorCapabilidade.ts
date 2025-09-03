@@ -5,28 +5,42 @@ import { Fabrica } from "@libs/lib/modules/fabrica/@core/entities/Fabrica.entity
 import { Inject, Logger } from "@nestjs/common";
 import { IGerenciadorPlanejamentConsulta } from "@libs/lib/modules/fabrica/@core/interfaces/IGerenciadorPlanejamentoConsulta";
 import { CODIGOSETOR } from "@libs/lib/modules/planejamento/@core/enum/CodigoSetor.enum";
-import { ConsultaPlanejamentoService } from "@libs/lib/modules/fabrica/infra/service/ConsultaPlanejamentos.service";
-import { addBusinessDays, differenceInBusinessDays, isAfter, isBefore } from "date-fns";
+import { addBusinessDays, differenceInBusinessDays, isAfter, isSameDay } from "date-fns";
 import { IVerificaCapacidade } from "@libs/lib/modules/fabrica/@core/interfaces/IVerificaCapacidade";
 import { RealocacaoParcial } from "@libs/lib/modules/planejamento/@core/classes/RealocacaoParcial";
+import { Calendario } from "@libs/lib/modules/shared/@core/classes/Calendario";
 
 export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
 
     constructor(
-        @Inject(ConsultaPlanejamentoService) private consulta: ConsultaPlanejamentoService,
         @Inject(IGerenciadorPlanejamentConsulta) gerenciador: IGerenciadorPlanejamentConsulta,
     ) {
         super(gerenciador);
     }
 
     logger = new Logger();
-
+    protected calendario: Calendario;
+    /**
+     * 
+     * @param planejamentosDoPedido 
+     * @param dataEstopim 
+     * @param setor 
+     * @description filtra os planejamentos do setor em questao em que a data de estopim é maior ou igual
+     * @returns 
+     */
     private planejamentosDoSetor(planejamentosDoPedido: PlanejamentoTemporario[], dataEstopim: Date, setor: CODIGOSETOR): PlanejamentoTemporario[] {
         return planejamentosDoPedido
-            .filter(p => p.setor === setor && isAfter(p.dia, dataEstopim))
+            .filter(p => p.setor === setor && (isAfter(p.dia, dataEstopim) || isSameDay(p.dia, dataEstopim)))
             .sort((a, b) => a.dia.getTime() - b.dia.getTime());
     }
 
+    /**
+     * 
+     * @param planejamentos 
+     * @param dataEstopim 
+     * @description calcula a diferenca de dias entre o planejamento estopim e o planejamentos afetados
+     * @returns 
+     */
     private calcOffSet(planejamentos: PlanejamentoTemporario[], dataEstopim: Date): number[] {
         return planejamentos.map(plan =>
             differenceInBusinessDays(plan.dia, dataEstopim)
@@ -40,7 +54,7 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
         verificacao: IVerificaCapacidade,
     ): Promise<RealocacaoParcial> {
 
-        this.logger.log('REALOCACAO NORMAL INIT');
+        this.logger.log(`REALOCACAO COM DEPENDENCIA SEM DEP INIT ${setor}`)
 
         const resultado: RealocacaoParcial = new RealocacaoParcial();
 
@@ -48,7 +62,7 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
 
         console.log(dataEstopim);
 
-        console.log(props.planejamentoPedido)
+        console.log(props.planejamentoPedido);
 
         //pega dos planejados oq é depois da data de estopim e esta no setor corrente
         const planejamentosImpactadoDoSetorASC = this.planejamentosDoSetor(
@@ -57,17 +71,17 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
             setor
         );
 
-        setor === props.planejamentoFalho.setor && planejamentosImpactadoDoSetorASC.unshift(props.planejamentoFalho);
-
+        // setor === props.planejamentoFalho.setor && planejamentosImpactadoDoSetorASC.unshift(props.planejamentoFalho);
         console.log(planejamentosImpactadoDoSetorASC.map(s => s.setor));
 
         const offsetsRelativos = this.calcOffSet(planejamentosImpactadoDoSetorASC, dataEstopim);
 
         console.log(`offset ${setor}:`, offsetsRelativos);
 
-        let totalParaRealocar = props.planejamentoFalho.qtd;
+        // let totalParaRealocar = props.planejamentoFalho.qtd;
 
         for (const [index, planejamento] of planejamentosImpactadoDoSetorASC.entries()) {
+            let totalParaRealocar = planejamento.qtd;
 
             if (totalParaRealocar <= 0) {
                 console.log(`✅ Setor ${setor} finalizado. Pulando para o próximo da chain...`);
@@ -110,8 +124,7 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
 
 
         console.log(resultado)
-        
-        this.logger.log('REALOCACAO NORMAL INIT')
+
         return resultado;
     }
 
@@ -122,56 +135,60 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
         verificacao: IVerificaCapacidade,
         ultSetorPlan: RealocacaoParcial
     ): Promise<RealocacaoParcial> {
-        this.logger.log('REALOCACAO COM DEPENDENCIA INIT')
-
-        console.log('aqui');
+        this.logger.log(`REALOCACAO COM DEPENDENCIA INIT ${setor}`)
 
         const resultado = new RealocacaoParcial();
 
         const dataEstopim = props.planejamentoFalho.dia;
 
         // 1️⃣ Pega o planejamento original desse setor
-        const planejamentosOriginaisASC = this.planejamentosDoSetor(
+        const planejamentosDoSetorASC = this.planejamentosDoSetor(
             props.planejamentoPedido,
             dataEstopim,
             setor
         );
 
+        console.log(planejamentosDoSetorASC);
+
         const offsetsRelativos = this.calcOffSet(
-            planejamentosOriginaisASC,
+            planejamentosDoSetorASC,
             dataEstopim
         )
 
         console.log('offset:', offsetsRelativos);
 
         // 2️⃣ Quantidades que chegam do setor anterior
-        let quantidadeRestante = ultSetorPlan.adicionado
+        let quantidadeAnteriorAlocada = ultSetorPlan.adicionado
             .reduce((soma, p) => soma + p.qtd, 0);
 
+        console.log(`quanto preciso alocar ${quantidadeAnteriorAlocada}`)
+
         // 3️⃣ Itera sobre o planejamento original
-        for (const [index, planejamentoOriginal] of planejamentosOriginaisASC.entries()) {
-            if (quantidadeRestante <= 0) {
-                console.log(`✅ Setor ${setor} não precisa realocar mais nada.`);
+        for (const [index, planejamentoOriginal] of planejamentosDoSetorASC.entries()) {
+            if (quantidadeAnteriorAlocada <= 0) {
+                console.log(`✅ Setor ${setor} não precisa realocar mais nada. O replanejamento ja foi concluido`);
                 break;
             }
 
             const offset = offsetsRelativos[index];
-            let novaData = addBusinessDays(props.novaData, offset);
+
+            let novaData = this.calendario.addBusinessDays(props.novaData, offset);
 
             const capacidade = await this.gerenciadorPlan.possoAlocarQuantoNoDia(
                 fabrica,
                 novaData,
                 setor,
                 planejamentoOriginal.item,
-                verificacao,
+                verificacao
             );
 
             if (capacidade <= 0) {
                 novaData = this.calendario.proximoDiaUtilReplanejamento(novaData);
             }
 
-            const qtdAlocada = Math.min(quantidadeRestante, capacidade);
-            const sobra = quantidadeRestante - qtdAlocada;
+            const qtdAlocada = Math.min(props.pedido.item.capabilidade(setor), capacidade);
+
+            const sobra = quantidadeAnteriorAlocada - qtdAlocada;
 
             // Marca original como retirado
             resultado.retirado.push(planejamentoOriginal);
@@ -180,24 +197,21 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
             resultado.adicionado.push({
                 ...planejamentoOriginal,
                 dia: novaData,
-                planejamentoSnapShotId: undefined,
                 qtd: qtdAlocada,
             });
 
-            quantidadeRestante = sobra;
-
             // Se sobrou, joga para próximo dia
-            if (sobra > 0) {
-                const proximoDia = this.calendario.proximoDiaUtilReplanejamento(novaData);
-                resultado.adicionado.push({
-                    ...planejamentoOriginal,
-                    dia: proximoDia,
-                    qtd: sobra,
-                });
-            } else {
-                console.log(`✅ Setor ${setor} conseguiu processar tudo em ${novaData}`);
-                break;
-            }
+            // if (sobra > 0) {
+            //     const proximoDia = this.calendario.proximoDiaUtilReplanejamento(novaData);
+            //     resultado.adicionado.push({
+            //         ...planejamentoOriginal,
+            //         dia: proximoDia,
+            //         qtd: sobra,
+            //     });
+            // } else {
+            //     console.log(`✅ Setor ${setor} conseguiu processar tudo em ${novaData}`);
+            //     break;
+            // }
         }
         this.logger.log('REALOCACAO COM DEPENDENCIA INIT')
         return resultado;

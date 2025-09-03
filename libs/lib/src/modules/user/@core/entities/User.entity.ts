@@ -1,5 +1,6 @@
+import { GerenciaCargo } from "@libs/lib/modules/cargos/@core/entities/GerenciaCargo.entity";
 import { ApiProperty } from "@nestjs/swagger";
-import { Exclude, Type } from "class-transformer";
+import { Exclude } from "class-transformer";
 import { IsDate, IsString } from "class-validator";
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
@@ -20,7 +21,6 @@ export class User {
     @Column('varchar')
     email: string;
 
-
     @Column('varchar', { select: false })
     @ApiProperty()
     @IsString()
@@ -32,12 +32,15 @@ export class User {
     @Column({ nullable: true, select: false })
     avatar: string;
 
-    @ApiProperty()
-    @IsDate()
     // @Column({
     //     default: () => `DATETIME('now', 'localtime')`,
     //     type: 'datetime'
     // })
+    @ApiProperty()
+    @IsDate()
     @CreateDateColumn()
     created: Date;
+
+    @OneToMany(() => GerenciaCargo, (gerencia) => gerencia.user)
+    gerencias: GerenciaCargo[];
 }

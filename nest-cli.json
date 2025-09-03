@@ -47,6 +47,24 @@
       "compilerOptions": {
         "tsConfigPath": "apps/planejamento-ethos/tsconfig.app.json"
       }
+    },
+    "sincroniza-producao": {
+      "type": "application",
+      "root": "apps/sincroniza-producao",
+      "entryFile": "main",
+      "sourceRoot": "apps/sincroniza-producao/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/sincroniza-producao/tsconfig.app.json"
+      }
+    },
+    "sugere-planejamento": {
+      "type": "application",
+      "root": "apps/sugere-planejamento",
+      "entryFile": "main",
+      "sourceRoot": "apps/sugere-planejamento/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/sugere-planejamento/tsconfig.app.json"
+      }
     }
   }
 }

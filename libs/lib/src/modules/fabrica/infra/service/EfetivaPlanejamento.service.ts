@@ -1,11 +1,10 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { PlanejamentoSnapShotRepository } from "../repository/PlanejamentoSnapShot.repository";
 import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/classes/PlanejamentoTemporario";
 import { Fabrica } from "../../@core/entities/Fabrica.entity";
 import { PlanejamentoSnapShot } from "../../@core/entities/PlanejamentoSnapShot.entity";
 import { SnapShotEstados } from "../../@core/enum/SnapShotEstados.enum";
 import { FabricaService } from "./Fabrica.service";
-import { IConverteItem } from "@libs/lib/modules/item/@core/interfaces/IConverteItem";
 
 @Injectable()
 export class EfetivaPlanejamentoService {
@@ -40,11 +39,10 @@ export class EfetivaPlanejamentoService {
 
       // atualiza a fabrica com todos
       fabrica.appendPlanejamento([...novosSnapshots, ...snapshotsExistentes]);
-
+      console.log(novosSnapshots)
       const fabricaAtualizada = await this.fabricaService.saveFabrica(fabrica);
 
       return fabricaAtualizada.planejamentoSnapShots;
-
     } catch (error) {
       throw new Error(`Problemas para salvar o planejamento: ${(error as Error).message}`);
     }
@@ -68,13 +66,6 @@ export class EfetivaPlanejamentoService {
   ): Promise<PlanejamentoSnapShot> {
     const acao = this.resolveAcao(planejamentoTemp.qtd);
 
-    // const itemResolvido =
-    //   planejamentoTemp.setor === CODIGOSETOR.MONTAGEM
-    //     ? planejamentoTemp.pedido.item
-    //     : await this.converteItem.converter(planejamentoTemp.pedido.item.Item);
-
-    // console.log(planejamentoTemp.item.getCodigo())
-
     return this.planejamentoSnapShotRepository.create({
       fabrica,
       planejamento: {
@@ -90,7 +81,6 @@ export class EfetivaPlanejamentoService {
    * Resolve a ação do snapshot a partir da quantidade
    */
   private resolveAcao(qtd: number): SnapShotEstados {
-    if (qtd === 0) return SnapShotEstados.delete;
-    return SnapShotEstados.base;
+    return qtd === 0 ? SnapShotEstados.delete : SnapShotEstados.base;
   }
 }

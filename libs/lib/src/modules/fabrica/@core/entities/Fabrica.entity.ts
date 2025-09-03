@@ -24,14 +24,14 @@ export class Fabrica {
     @JoinColumn({ name: 'userId' })
     user: User;
 
-    @Column(process.env.BD === 'PROD' ? 'bit' : 'bit')
+    @Column(process.env.BD === 'PROD' ? 'bit' : 'boolean')
     principal: boolean;
 
     @ManyToOne(() => Fabrica, fabrica => fabrica.childrenFabricas, { nullable: true })
     @JoinColumn({ name: 'fabricaPaiId' })
     fabricaPai?: Fabrica;
 
-    @Column(process.env.BD === 'PROD' ? 'bit' : 'bit')
+    @Column(process.env.BD === 'PROD' ? 'bit' : 'boolean')
     checkPoint: boolean;
 
     @OneToMany(() => Fabrica, fabrica => fabrica.fabricaPai)

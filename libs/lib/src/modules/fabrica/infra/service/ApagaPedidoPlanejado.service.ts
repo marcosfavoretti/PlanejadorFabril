@@ -20,7 +20,7 @@ export class ApagaPedidoPlanejadoService {
         for(const planejamento of planejamentos){
             await this.gerenciadorPlanejamentoMutation.removePlanejamento(
                 fabrica,
-                planejamento
+                [planejamento]
             )
         }
     }

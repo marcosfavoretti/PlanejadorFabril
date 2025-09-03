@@ -10,6 +10,7 @@ import { Calendario } from "@libs/lib/modules/shared/@core/classes/Calendario";
 import { Planejamento } from "@libs/lib/modules/planejamento/@core/entities/Planejamento.entity";
 import { IGerenciaOverwrite } from "../../@core/interfaces/IGerenciaOverwrite";
 import { FabricaService } from "./Fabrica.service";
+import { PlanejamentoOverWriteByPedidoService } from "../../@core/services/PlanejamentoOverWriteByPedido.service";
 
 
 export class ConsultaPlanejamentoService {
@@ -20,6 +21,25 @@ export class ConsultaPlanejamentoService {
     ) { }
 
     private calendario = new Calendario();
+
+
+    async consultaPlanejamentoDaFabricaPrincipal(): Promise<PlanejamentoSnapShot[]> {
+        const fabricaPrincipal = await this.fabricaService.consultaFabricaPrincipal();
+        if (!fabricaPrincipal) throw new Error('sem fabrica principal');
+        const fabricasAlvos = await this.fabricaService.consultarFabricasAteCheckPoint(fabricaPrincipal);
+        const fabricasAlvosIds = fabricasAlvos.map(fabrica => fabrica.fabricaId);
+        const planejamentos = await this.planejamentoSnapShotRepository.find({
+            where: {
+                fabrica: {
+                    fabricaId: In(fabricasAlvosIds)
+                },
+                planejamento: {
+                    dia: MoreThanOrEqual(this.calendario.inicioDoDia(new Date()))
+                }
+            }
+        });
+        return await new PlanejamentoOverWriteByPedidoService().resolverOverwrite(planejamentos);
+    }
 
     async consultaPlanejamentosSnapShots(fabrica: Fabrica): Promise<PlanejamentoSnapShot[]> {
         const fabricaSnapShots = await this.planejamentoSnapShotRepository.find({
@@ -168,6 +188,14 @@ export class ConsultaPlanejamentoService {
         return await this.planejamentoSnapShotRepository.findOneOrFail({
             where: {
                 planejamentoSnapShotId: planejamentoSnapShotId
+            }
+        })
+    }
+
+    async consultaPlanejamentoSnapShots(planejamentoSnapShotId: number[]): Promise<PlanejamentoSnapShot[]> {
+        return await this.planejamentoSnapShotRepository.find({
+            where: {
+                planejamentoSnapShotId: In(planejamentoSnapShotId)
             }
         })
     }

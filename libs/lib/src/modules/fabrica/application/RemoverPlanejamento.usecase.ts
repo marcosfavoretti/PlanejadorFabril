@@ -26,7 +26,7 @@ export class RemoverPlanejamentoUseCase {
             const planejamentoSnapShot = await this.consultaPlanejamentoService.consultaPlanejamentoEspecifico(fabrica, planejamento, new PlanejamentoOverWriteByPedidoService())
             await this.gerenciadorPlanejamento.removePlanejamento(
                 fabrica,
-                planejamentoSnapShot
+                [planejamentoSnapShot]
             );
             const planejamentoQtd = planejamento.qtd;
             await this.gerenciaDividaService.resolverDividasParaSalvar(

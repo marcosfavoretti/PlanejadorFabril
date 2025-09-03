@@ -27,7 +27,12 @@ export class GerenciadorPlanejamento implements
         @Inject(ConsultaPlanejamentoService) private consultaPlanejamentoService: ConsultaPlanejamentoService,
     ) { }
 
-    async appendReplanejamento(fabrica: Fabrica, pedido: Pedido, planejamentosOriginais: PlanejamentoSnapShot[], planejamentosNovos: PlanejamentoTemporario[]): Promise<Planejamento[]> {
+    async appendReplanejamento(
+        fabrica: Fabrica,
+        pedido: Pedido,
+        planejamentosOriginais: PlanejamentoSnapShot[],
+        planejamentosNovos: PlanejamentoTemporario[]
+    ): Promise<Planejamento[]> {
         await this.planejamentoValidatorExecutor.execute(fabrica, pedido, planejamentosNovos);
         const resultados = await this.efetivaPlanejamentoService.efetiva(fabrica, planejamentosNovos);
         return resultados.flatMap(plan => plan.planejamento);
@@ -35,21 +40,22 @@ export class GerenciadorPlanejamento implements
 
     async removePlanejamento(
         fabrica: Fabrica,
-        planejamento: PlanejamentoSnapShot
+        planejamento: PlanejamentoSnapShot[]
     ): Promise<void> {
         // const planejamentoSnapShot = await this.consultaPlanejamentoService.consultaPlanejamentoEspecifico(
         //     fabrica,
         //     planejamento,
         //     new PlanejamentoOverWriteByPedidoService()
         // );
-        await this.efetivaPlanejamentoService.remove(fabrica, planejamento );
+        const planPromises = planejamento.map(m => this.efetivaPlanejamentoService.remove(fabrica, m));
+        await Promise.all(planPromises);
     }
 
     async appendPlanejamento(fabrica: Fabrica, pedido: Pedido, planejamentosTemp: PlanejamentoTemporario[]): Promise<Planejamento[]> {
         await this.planejamentoValidatorExecutor.execute(fabrica, pedido, planejamentosTemp);
 
         for (const planejamentoTemp of planejamentosTemp) {
-            
+
             const planejamentoSemelhante = await this.consultaPlanejamentoService.consultaItemNoSetorNoDia(
                 fabrica,
                 pedido.item,

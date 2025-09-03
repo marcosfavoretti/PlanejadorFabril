@@ -2,9 +2,11 @@ import { Inject, Logger } from "@nestjs/common";
 import { MetodoDeAlocacao } from "@libs/lib/modules/planejamento/@core/abstract/MetodoDeAlocacao";
 import { SetorService } from "@libs/lib/modules/planejamento/@core/abstract/SetorService";
 import { CODIGOSETOR } from "@libs/lib/modules/planejamento/@core/enum/CodigoSetor.enum";
+import { PIPE_FABRICACAO } from "../../PipeFrabricacao.provider";
 
 export class SetorChainFactoryService {
-    @Inject('PIPE_FABRICACAO') private pipeProducao: SetorService
+    @Inject(PIPE_FABRICACAO) private pipeProducao: SetorService;
+    
     logger = new Logger();
 
     getSetor(setor: CODIGOSETOR): SetorService {
@@ -18,13 +20,18 @@ export class SetorChainFactoryService {
 
     setMetodoDeAlocacaoCustomTodos(pipeProducaoCustom: SetorService, setores: CODIGOSETOR[], metodoDeAlocacao: MetodoDeAlocacao): SetorService {
         const pipeAsList = pipeProducaoCustom.getSetoresInChain(setores);
-        console.log(pipeAsList.map(a=>a.getSetorCode()))
         pipeAsList.forEach(pipe => pipe.setMetodoDeAlocacao(metodoDeAlocacao));
         return pipeProducaoCustom;
     }
 
-    modificarCorrente(codigosAlvos: CODIGOSETOR[]): SetorService {
-        const setoresService = this.pipeProducao.getSetoresInChainClone(codigosAlvos);
+    setMetodoDeAlocacaoCustomUnico(pipeProducaoCustom: SetorService, setor: CODIGOSETOR, metodoDeAlocacao: MetodoDeAlocacao): SetorService {
+        const setorService = pipeProducaoCustom.getSetorInChain(setor);
+        setorService.setMetodoDeAlocacao(metodoDeAlocacao);
+        return pipeProducaoCustom;
+    }
+
+    modificarCorrente(codigosAlvos: CODIGOSETOR[], corrente?: SetorService): SetorService {
+        const setoresService = (corrente||this.pipeProducao).getSetoresInChainClone(codigosAlvos);
         for (let i = 0; i < setoresService.length - 1; i++) {
             setoresService[i].setNextSetor(setoresService[i + 1]);
         }

@@ -26,6 +26,8 @@ import {
     RemoverPlanejamentoUseCase,
     DeletarFabricaUseCase
 } from "./application";
+import { RequestFabricaMergeUseCase } from "./application/RequestFabricaMerge.usecase";
+import { ConsultaMergeRequestUseCase } from "./application/ConsultaMergeRequest.usecase";
 
 
 @Module({
@@ -43,7 +45,9 @@ import {
         HandleStartUpBuildFabricaUseCase,
         AdicionarPlanejamentoManualUseCase,
         HandleDateVirtualUseCase,
+        RequestFabricaMergeUseCase,
         ConsultarDateVirtualUseCase,
+        ConsultaMergeRequestUseCase,
         ConsultarDatasPlanejadasUseCase,
         CriarNovaFabricaPrincipalUseCase,
         PlanejarPedidoUseCase,
@@ -59,6 +63,7 @@ import {
         RemoverPlanejamentoUseCase,
     ],
     exports: [
+        RequestFabricaMergeUseCase,
         DesplanejarPedidoUseCase,
         RemoverPlanejamentoUseCase,
         DeletarFabricaUseCase,
@@ -73,6 +78,7 @@ import {
         AdicionarPlanejamentoManualUseCase,
         ConsutlarFabricaPrincipalAtualUseCase,
         CriarNovaFabricaPrincipalUseCase,
+        ConsultaMergeRequestUseCase,
         ConsultarDatasPlanejadasUseCase,
         HandleStartUpBuildFabricaUseCase,
         ConsultarDateVirtualUseCase,

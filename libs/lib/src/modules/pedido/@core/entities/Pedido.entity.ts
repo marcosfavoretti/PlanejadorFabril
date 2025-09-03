@@ -2,7 +2,8 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMan
 import * as datefns from "date-fns";
 import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
 import { Planejamento } from "@libs/lib/modules/planejamento/@core/entities/Planejamento.entity";
-
+import { config } from "dotenv";
+config()
 @Entity()
 export class Pedido {
     @PrimaryGeneratedColumn("increment")
@@ -17,7 +18,7 @@ export class Pedido {
     @Column()
     lote: number;
 
-    @Column(process.env.BD === 'PROD' ? 'bit' : 'bit', { default: false })
+    @Column(process.env.BD === 'PROD' ? 'bit' : 'boolean', { default: false })
     processado: boolean;
 
     @ManyToOne(() => Item, { eager: true })

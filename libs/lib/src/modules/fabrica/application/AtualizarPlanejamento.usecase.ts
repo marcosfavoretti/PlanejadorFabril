@@ -14,7 +14,9 @@ import { VerificaCapabilidade } from "../@core/classes/VerificaCapabilidade";
 import { FabricaSimulacaoService } from "../infra/service/FabricaSimulacao.service";
 import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/classes/PlanejamentoTemporario";
 import { IGerenciadorPlanejamentoMutation } from "../@core/interfaces/IGerenciadorPlanejamento";
-import { isSameDay } from "date-fns";
+import { addISOWeekYears, isSameDay } from "date-fns";
+import { CalculaDividaDoPlanejamento } from "../@core/services/CalculaDividaDoPlanejamento";
+import { PlanejamentoTempOverWriteByPedidoService } from "../@core/services/PlanejamentoTempOverWriteByPedido";
 
 export class AtualizarPlanejamentoUseCase {
 
@@ -37,32 +39,68 @@ export class AtualizarPlanejamentoUseCase {
 
             const planejamentoSnapShotAlvo = await this.consultaPlanejamentoService.consultaPlanejamentoEspecifico(fabrica, planejamento, new PlanejamentoOverWriteByPedidoService());
 
-            const planejamentoTemporaio = PlanejamentoTemporario.createByEntity(planejamentoSnapShotAlvo);
+            const planejamentoTemporario = PlanejamentoTemporario.createByEntity(planejamentoSnapShotAlvo);
 
-            qtdAtualizado != undefined && (planejamentoTemporaio.qtd = qtdAtualizado);
+            /**
+             * se tiver mudanca de valor eu atualizo o valor da variavel
+             */
+            qtdAtualizado != undefined && (planejamentoTemporario.qtd = qtdAtualizado);
 
+            /**
+             * se tiver mudanca de dia eu vejo se consigo replanejar
+             */
             if (!isSameDay(diaAtualizado, planejamento.dia)) {
                 console.log('necessario replan')
                 const _replanejamentoResultado = await this.fabricaSimulacaoService.replanejar(
                     fabrica,
-                    [planejamentoTemporaio],
+                    [planejamentoTemporario],
                     diaAtualizado
                 );
                 //se atualizar o dia o servico de planejamento ja vai salvar o planejamento
+                await this.gerenciadorPlanejado.appendPlanejamento(fabrica, planejamento.pedido, _replanejamentoResultado.planejamentos);
+
+                const snapShotParaRemover: number[] = await _replanejamentoResultado.retirado.map(retirado => retirado.planejamentoSnapShotId).filter(Boolean) as number[];
+
+                const snapshotsCompletos = await this.consultaPlanejamentoService.consultaPlanejamentoSnapShots(snapShotParaRemover)
+                
+                await this.gerenciadorPlanejado.removePlanejamento(fabrica, [...snapshotsCompletos]);
+
                 return;
             }
 
-            const divida = await this.gerenciaDividaService.resolverDividasParaSalvar(
+            /**
+             * removo o planejamento redundante para nao sumariazar
+             */
+            await this.gerenciadorPlanejado.removePlanejamento(fabrica, [planejamentoSnapShotAlvo]);
+            //
+            //-=-=-=-=-=-=-=-=-=-=
+            /**
+             * consulto os planejamentos da fabrica para calcular dividas
+             */
+            const planejamentos = await this.consultaPlanejamentoService.consultaPlanejamentosSnapShots(fabrica);
+
+            const allPlanejamentos = planejamentos.map(plan =>
+                PlanejamentoTemporario.createByEntity(plan))
+                .concat(planejamentoTemporario);
+
+
+            await this.gerenciaDividaService.resolverDividasParaSalvar(
                 fabrica,
                 planejamentoSnapShotAlvo.planejamento.pedido,
-                new CalculaDividaDaAtualizacao({
+                new CalculaDividaDoPlanejamento({
                     pedido: planejamentoSnapShotAlvo.planejamento.pedido,
-                    planejamentoNovo: planejamentoTemporaio,
-                    planejamentoOrigial: planejamentoSnapShotAlvo.planejamento
+                    planejamentos: new PlanejamentoTempOverWriteByPedidoService()
+                        .resolverOverwrite(
+                            allPlanejamentos
+                        )
                 }),
             );
-
-            await this.gerenciadorPlanejado.appendPlanejamento(fabrica, planejamento.pedido, [planejamentoTemporaio]);
+            //-=-=-=-=-=-=-=-=-=-=
+            /**
+             * salvo o novo planejamentos
+             */
+            await this.gerenciadorPlanejado.appendPlanejamento(fabrica, planejamento.pedido, [planejamentoTemporario]);
+            //
         }
         catch (error) {
             if (error instanceof EntityNotFoundError) throw new NotFoundException(error);

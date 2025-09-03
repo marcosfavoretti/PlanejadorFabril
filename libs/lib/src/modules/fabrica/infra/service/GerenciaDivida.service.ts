@@ -12,16 +12,23 @@ export class GerenciaDividaService {
         @Inject(DividaService) private dividaService: DividaService
     ) { }
 
-  /**
-  * @param fabrica 
-  * @param pedido 
-  * @param estrategia
-  * @description Metodo que com base na estrategia vai ver se precisa incrementar ou decrementar a divida. Caso for preciso alguma ação ele ja chamara o metodo do repositorio 
-  * @returns 
-  */
-    async resolverDividasParaSalvar(fabrica: Fabrica, pedido: Pedido, estrategia: ICalculoDivida): Promise<Divida[]> {
+    async apagarDividas(fabrica: Fabrica, pedido: Pedido): Promise<void> {
+        await this.dividaService.removerDividaNaFabricaDoPedido(fabrica, pedido);
+    }
+
+    /**
+    * @param fabrica 
+    * @param pedido 
+    * @param estrategia
+    * @description Metodo que com base na estrategia vai ver se precisa incrementar ou decrementar a divida. Caso for preciso alguma ação ele ja chamara o metodo do repositorio 
+    * @returns 
+    */
+    async resolverDividasParaSalvar(fabrica: Fabrica, pedido: Pedido, estrategia: ICalculoDivida): Promise<Divida[]> {//esse metodo logo nao podera mais executar a interface dentro dele
         try {
             const dividasCalculadas = await estrategia.calc();
+
+            console.log('->', dividasCalculadas);
+
             const dividasTotalizadas = await this.dividaService.consultarDividaTotalizadaDoPedido(fabrica, pedido);
 
             const dividaBancoMap = new Map<CODIGOSETOR, number>();
@@ -33,7 +40,7 @@ export class GerenciaDividaService {
             const dividasParaSalvar: Partial<Divida>[] = dividasCalculadas.map((dividaCalculada: Divida) => {
                 const dividaBanco = dividaBancoMap.get(dividaCalculada.setor.codigo) ?? 0;
                 console.log(dividaBanco, dividaCalculada.qtd)
-                const qtdFinal = dividaCalculada.qtd //< 0 ? dividaCalculada.qtd + dividaBanco : dividaCalculada.qtd - dividaBanco
+                const qtdFinal = dividaCalculada.qtd + dividaBanco//< 0 ? dividaCalculada.qtd + dividaBanco : dividaCalculada.qtd - dividaBanco
                 return {
                     ...dividaCalculada,
                     qtd: qtdFinal,
@@ -45,6 +52,7 @@ export class GerenciaDividaService {
             const dividasSnapShot = await this.dividaService.addDivida(
                 fabrica, dividasParaSalvar, SnapShotEstados.base, 'calculo'
             );
+
             return dividasSnapShot.map(d => d.divida);
 
         } catch (error) {

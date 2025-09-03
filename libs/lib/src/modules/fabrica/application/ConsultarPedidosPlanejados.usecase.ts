@@ -1,5 +1,4 @@
 import { Inject, InternalServerErrorException } from "@nestjs/common";
-import { ConsultaPlanejamentoService } from "../infra/service/ConsultaPlanejamentos.service";
 import { FabricaService } from "../infra/service/Fabrica.service";
 import { ConsutlarFabricaDTO } from "@dto/ConsultarFabrica.dto";
 import { PedidosPlanejadosResponseDTO } from "@dto/PedidosPlanejadosResponse.dto";
