@@ -5,7 +5,7 @@ import { PlanejamentoTemporario } from "../classes/PlanejamentoTemporario";
 import { CODIGOSETOR } from "../enum/CodigoSetor.enum";
 import { Fabrica } from "@libs/lib/modules/fabrica/@core/entities/Fabrica.entity";
 import { IVerificaCapacidade } from "@libs/lib/modules/fabrica/@core/interfaces/IVerificaCapacidade";
-import { ISelecionarItem } from "@libs/lib/modules/fabrica/@core/interfaces/ISelecionarItem";
+import { ISelecionarItem } from "@libs/lib/modules/item/@core/interfaces/ISelecionarItem";
 import { AlocacaoProps } from "@libs/lib/modules/fabrica/@core/classes/AlocacaoProps";
 import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
 
@@ -35,6 +35,7 @@ export abstract class MetodoDeAlocacao {
         protected Itemselecionador: ISelecionarItem
     ) { }
 
+    //TODO: preciso melhorar a logica desse metodo, talvez tirar daqui
     protected abstract diasPossiveis(fabrica: Fabrica, pedido: Pedido, setor: CODIGOSETOR): Promise<Date[]>;
 
     protected abstract alocacao(
@@ -45,6 +46,8 @@ export abstract class MetodoDeAlocacao {
         props: AlocacaoComDependenciaProps
     ): Promise<PlanejamentoTemporario[]>;
 
+    abstract verificacaoCapacidade(pedido: Pedido, codigoSetor: CODIGOSETOR): IVerificaCapacidade;
+    
     public async hookAlocacao(
         props: HookAlocacaoProps
     ): Promise<PlanejamentoTemporario[]> {
@@ -76,5 +79,4 @@ export abstract class MetodoDeAlocacao {
         return planejamento
     }
 
-    abstract verificacaoCapacidade(pedido: Pedido, codigoSetor: CODIGOSETOR): IVerificaCapacidade
 }

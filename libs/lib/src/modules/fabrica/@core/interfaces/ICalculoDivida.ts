@@ -1,7 +1,19 @@
-import { Divida } from "../entities/Divida.entity";
+import { Pedido } from "@libs/lib/modules/pedido/@core/entities/Pedido.entity";
+import { Fabrica } from "../entities/Fabrica.entity";
+import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/classes/PlanejamentoTemporario";
+import { DividaTemporaria } from "../classes/DividaTemporaria";
 
+export const ICalculoDivida = Symbol('ICalculoDivida');
 
-//poss arquitetar isso para injecao mais para frente
+export type CalculaDividaDoPlanejamentoProps = {
+    fabrica: Fabrica
+    pedido: Pedido,
+    planejamentos: PlanejamentoTemporario[],
+}
+
+/**
+ * para forcar o decrecimo de uma divida retorne um divida de valor negativo
+ */
 export interface ICalculoDivida {
-    calc(): Promise<Partial<Divida>[]> | Partial<Divida>[];
+    calc(props: CalculaDividaDoPlanejamentoProps): Promise<DividaTemporaria[]> | DividaTemporaria[];
 }

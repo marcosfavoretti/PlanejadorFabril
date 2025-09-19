@@ -16,11 +16,11 @@ export function EnriqueceHtml(
 ) {
     const original = descriptor.value;
     descriptor.value = async function (email: Email, ...args: any[]) {
-        const emailTemplate = {
+        const emailTemplate: Mailgen.Content = {
             body: {
-                name: email.getProps.to[0],
+                name: email.getProps.to.join(', '),
                 intro: email.getProps.subject,
-                outro: email.getProps.html || email.getProps.text,
+                outro: email.getProps.html || email.getProps.text
             },
         };
         email.getProps.html = mailGenerator.generate(emailTemplate);

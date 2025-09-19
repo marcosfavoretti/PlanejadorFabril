@@ -5,7 +5,7 @@ import { EntitySchema, MixedList } from "typeorm";
 export function typeormSynecoConfig(entities: MixedList<EntitySchema<any> | Function>): DynamicModule {
     const config: TypeOrmModuleOptions = {
         type: 'mssql',
-        logging: false,
+        logging: ['error'],
         database: process.env.SQLDATABASE,
         username: process.env.SQLUSER,
         password: process.env.SQLSENHA,

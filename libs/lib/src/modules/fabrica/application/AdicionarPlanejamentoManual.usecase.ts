@@ -8,8 +8,10 @@ import { EntityNotFoundError } from "typeorm";
 import { IGerenciadorPlanejamentoMutation } from "../@core/interfaces/IGerenciadorPlanejamento";
 import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/classes/PlanejamentoTemporario";
 import { GerenciaDividaService } from "../infra/service/GerenciaDivida.service";
-import { CalculaDividaPosPlanManual } from "../@core/services/CalculaDividaPosPlanManual";
 import { startOfDay } from "date-fns";
+import { PlanejamentoTemporarioBuilder } from "../../planejamento/@core/builder/PlanejamentoTemporario.builder";
+import { ConsultaPlanejamentoService } from "../infra/service/ConsultaPlanejamentos.service";
+import { PlanejamentoOverWriteByPedidoService } from "../@core/services/PlanejamentoOverWriteByPedido.service";
 
 export class AdicionarPlanejamentoManualUseCase {
     constructor(
@@ -18,7 +20,7 @@ export class AdicionarPlanejamentoManualUseCase {
         @Inject(PedidoService) private pedidoService: PedidoService,
         @Inject(GerenciaDividaService) private gereciaDivida: GerenciaDividaService,
         @Inject(IGerenciadorPlanejamentoMutation) private gerenciadorPlanejamento: IGerenciadorPlanejamentoMutation,
-        // @Inject(ConsultaPlanejamentoService) private consultarPlanejamentos: ConsultaPlanejamentoService
+        @Inject(ConsultaPlanejamentoService) private consultaPlanejamentoService: ConsultaPlanejamentoService
     ) { }
 
     async adicionar(dto: AdicionarPlanejamentoDTO): Promise<PlanejamentoResponseDTO> {
@@ -26,8 +28,10 @@ export class AdicionarPlanejamentoManualUseCase {
             const [fabrica, pedido, item] = await Promise.all([
                 this.fabricaService.consultaFabrica(dto.fabricaId),
                 this.pedidoService.consultarPedido(dto.pedidoId),
-                this.itemService.consultarItem(dto.item)
+                this.itemService.consultarItem(dto.item),
             ]);
+
+            const planejamentosAtuais = await this.consultaPlanejamentoService.consultaPlanejamentoAtual(fabrica, new PlanejamentoOverWriteByPedidoService());
 
             if (fabrica.principal) throw new BadRequestException('Fabricas principais nao podem ser pogramadas diretamente');
 
@@ -37,25 +41,30 @@ export class AdicionarPlanejamentoManualUseCase {
             /**
              * criar um novo planejamento Temporario
              */
-            const planejamentoTemporario = new PlanejamentoTemporario();
-            planejamentoTemporario.dia = startOfDay(dto.dia);
-            planejamentoTemporario.item = item;
-            planejamentoTemporario.pedido = pedido;
-            planejamentoTemporario.qtd = dto.qtd;
-            planejamentoTemporario.setor = dto.setor;
+            const planejamentoTemporario = new PlanejamentoTemporarioBuilder()
+                .dia(startOfDay(dto.dia))
+                .item(item)
+                .pedido(pedido)
+                .qtd(dto.qtd)
+                .setor(dto.setor)
+                .build();
             //
 
             /**
              * validacao se pode tirar dividas
              */
-            const _dividas = await this.gereciaDivida.resolverDividasParaSalvar(
-                fabrica,
-                pedido,
-                new CalculaDividaPosPlanManual({
-                    novoPlan: planejamentoTemporario,
-                    modo: 'INSERCAO'
-                })
+            const dividas = await this.gereciaDivida.resolverDividas(
+                {
+                    fabrica,
+                    pedido,
+                    planejamentos:
+                        planejamentosAtuais
+                            .map(PlanejamentoTemporario.createByEntity)
+                            .concat(planejamentoTemporario)
+                }
             );
+
+            await this.gereciaDivida.adicionaDividas(fabrica, dividas);
             //
 
             const [planejamentoGerado] = await this.gerenciadorPlanejamento.appendPlanejamento(

@@ -1,13 +1,13 @@
 import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
 import { CODIGOSETOR } from "@libs/lib/modules/planejamento/@core/enum/CodigoSetor.enum";
-import { IConsultaRoteiro } from "../../@core/interfaces/IConsultaRoteiro";
+import { IConsultaRoteiro } from "../../../item/@core/interfaces/IConsultaRoteiro";
 import { clientAxios } from "@libs/lib/config/AxiosClient";
 import { IConverteItem } from "@libs/lib/modules/item/@core/interfaces/IConverteItem";
 import { Inject, InternalServerErrorException } from "@nestjs/common";
 import { ItemService } from "@libs/lib/modules/item/infra/service/Item.service";
 import { IBuscarItemDependecias } from "@libs/lib/modules/item/@core/interfaces/IBuscarItemDependecias";
-import { ItemEstruturado } from "../../@core/classes/ItemEstruturado";
-import { IMontaEstrutura } from "../../@core/interfaces/IMontaEstrutura.ts";
+import { ItemEstruturado } from "../../../item/@core/classes/ItemEstruturado";
+import { IMontaEstrutura } from "../../../item/@core/interfaces/IMontaEstrutura.ts";
 
 export class EstruturaNeo4jApiService
     implements
@@ -32,7 +32,6 @@ export class EstruturaNeo4jApiService
 
     async monteEstrutura(item: Item): Promise<ItemEstruturado> {
         const itensDependentes = await this.buscar(item);
-        console.log('teste', itensDependentes.map(a => a.getCodigo()))
         const itemEstrutura = new ItemEstruturado();
         itemEstrutura.itemFinal = item;
         itemEstrutura.itemRops = itensDependentes[itensDependentes.length - 1];

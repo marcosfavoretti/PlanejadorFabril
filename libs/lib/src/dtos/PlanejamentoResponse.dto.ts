@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsDate, IsArray, ValidateNested } from 'class-validator';
+import { IsInt } from 'class-validator';
 import { Planejamento } from "@libs/lib/modules/planejamento/@core/entities/Planejamento.entity";
 
 export class PlanejamentoResponseDTO {
@@ -26,9 +26,9 @@ export class PlanejamentoResponseDTO {
     static fromEntity(entity: Planejamento): PlanejamentoResponseDTO {
         const dto = new PlanejamentoResponseDTO();
         dto.planejamentoId = entity.planejamentoId;
-        dto.item = entity.pedido.item.Item; 
+        dto.item = entity.item.Item; 
         dto.setor = entity.setor.codigo; 
-        dto.pedido = entity.pedido.codigo; 
+        dto.pedido = String(entity.pedido.id); 
         dto.dia = entity.dia;
         dto.qtd = entity.qtd;
         return dto;

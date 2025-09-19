@@ -10,7 +10,6 @@ import { Fabrica } from "../@core/entities/Fabrica.entity";
 import { OnNovoPlanejamento } from "../OnNovoPlanejamento.provider";
 import { IOnNovoPlanejamentos } from "../@core/interfaces/IOnNovoPlanejamento";
 import { GerenciaDividaService } from "../infra/service/GerenciaDivida.service";
-import { CalculaDividaDoPlanejamento } from "../@core/services/CalculaDividaDoPlanejamento";
 
 
 export class PlanejarPedidoUseCase {
@@ -60,18 +59,16 @@ export class PlanejarPedidoUseCase {
                     fabricaVersionada = await this.fabricaService.saveFabrica(fabricaNovaParaMudanca);
                 }
                 //
+                //rodar dividas | salvamento da tabela vai ser feito em outro servico apenas na hora de avaliar a producao diaria
+                const dividas = await this.gerenciaDividaService.resolverDividas({
+                    fabrica: fabricaVersionada,
+                    pedido,
+                    planejamentos: planejamentosTemporarios
+                });
+                await this.gerenciaDividaService.adicionaDividas(fabricaVersionada, dividas);
+                //
                 //salvamento do pedido
                 const planejamentos = await this.gerenciadorPlanejamentoMutation.appendPlanejamento(fabricaVersionada, pedido, planejamentosTemporarios);
-                //
-                //rodar dividas | salvamento da tabela vai ser feito em outro servico apenas na hora de avaliar a producao diaria
-                //faltando codigo
-                await this.gerenciaDividaService.resolverDividasParaSalvar(
-                    fabricaVersionada!,
-                    pedido,
-                    new CalculaDividaDoPlanejamento({
-                        pedido: pedido,
-                        planejamentos: planejamentosTemporarios
-                    }));
                 //
                 //roda eventos de pos planejamentos
                 const promises = this.onNovoPlanejamento.map(on => on.execute(fabricaVersionada!, planejamentos));
@@ -79,7 +76,7 @@ export class PlanejarPedidoUseCase {
                 //
                 pedido.processaPedido();
             }
-            
+
             await this.pedidoService.savePedido(pedidos);
         } catch (error) {
             console.error(error)

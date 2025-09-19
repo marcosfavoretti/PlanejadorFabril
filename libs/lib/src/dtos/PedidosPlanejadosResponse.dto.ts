@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Pedido } from "@libs/lib/modules/pedido/@core/entities/Pedido.entity";
 import { Divida } from "@libs/lib/modules/fabrica/@core/entities/Divida.entity";
+import { ItemResDto } from "./ItemRes.dto";
 
 export class PedidoSlimResponseDTO {
     @ApiProperty()
@@ -16,8 +17,9 @@ export class PedidoSlimResponseDTO {
     lote: number;
 
     @ApiProperty()
-    item: string;
+    item: ItemResDto;
 }
+
 
 
 class DividaSlimResponseDTO {
@@ -26,8 +28,12 @@ class DividaSlimResponseDTO {
 
     @ApiProperty()
     setorCodigo: string;
+
+    @ApiProperty()
+    item: ItemResDto;
 }
 
+class AtrasoSlimResponseDTO extends DividaSlimResponseDTO { }
 export class PedidosPlanejadosResponseDTO {
     @ApiProperty()
     pedido: PedidoSlimResponseDTO;
@@ -40,23 +46,39 @@ export class PedidosPlanejadosResponseDTO {
     )
     dividas: DividaSlimResponseDTO[];
 
-    static fromEntity(pedido: Pedido, dividas: Divida[]): PedidosPlanejadosResponseDTO {
-        const dto = new PedidosPlanejadosResponseDTO();
+    @ApiProperty(
+        {
+            type: AtrasoSlimResponseDTO,
+            isArray: true
+        }
+    )
+    atrasos: AtrasoSlimResponseDTO[];
 
-        dto.pedido = {
-            id: pedido.id,
-            codigo: pedido.codigo,
-            dataEntrega: pedido.dataEntrega,
-            lote: pedido.lote,
-            item: pedido.item.Item,
-        };
 
-        dto.dividas = dividas.map(divida => ({
-            ...divida,
-            setorCodigo: divida.setor.codigo,
-        }));
+    // static fromEntity(pedido: Pedido, dividas: Divida[], atrasos: AtrasoSlimResponseDTO[]): PedidosPlanejadosResponseDTO {
+    //     const dto = new PedidosPlanejadosResponseDTO();
 
-        return dto;
-    }
+    //     dto.pedido = {
+    //         id: pedido.id,
+    //         codigo: pedido.codigo,
+    //         dataEntrega: pedido.dataEntrega,
+    //         lote: pedido.lote,
+    //         item: pedido.item.Item,
+    //     };
+
+    //     dto.dividas = dividas.map(divida => ({
+    //         ...divida,
+    //         item: divida.item.getCodigo(),
+    //         setorCodigo: divida.setor.codigo,
+    //     }));
+
+    //     dto.atrasos = dividas.map(divida => ({
+    //         ...divida,
+    //         item: divida.item.getCodigo(),
+    //         setorCodigo: divida.setor.codigo,
+    //     }));
+
+    //     return dto;
+    // }
 
 }

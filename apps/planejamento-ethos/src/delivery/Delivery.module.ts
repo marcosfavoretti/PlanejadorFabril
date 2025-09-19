@@ -5,7 +5,6 @@ import { PlanejamentoController } from "./controllers/Planejamento.controller";
 import { PlanejamentoModule } from "@libs/lib/modules/planejamento/Planejamento.module";
 import { VirtualDateController } from "./controllers/VirtualDate.controller";
 import { ReplanejamentoModule } from "@libs/lib/modules/replanejamento/Replanejamento.module";
-import { ReplanejamentoController } from "./controllers/Replanejamento.controller";
 import { KpiModule } from "@libs/lib/modules/kpi/Kpi.module";
 import { UserController } from "./controllers/User.controller";
 import { UserModule } from "@libs/lib/modules/user/User.module";
@@ -19,9 +18,12 @@ import { ItemController } from "./controllers/Item.controller";
 import { ItemModule } from "@libs/lib/modules/item/Item.module";
 import { DonoDaFabricaGuard } from "@libs/lib/modules/fabrica/@core/guard/dono-da-fabrica.guard";
 import { FabricaServiceModule } from "@libs/lib/modules/fabrica/FabricaService.module";
+import { CargosModule } from "@libs/lib/modules/cargos/Cargos.module";
+import { CargoController } from "./controllers/Cargo.controller";
 
 @Module({
     imports: [
+        CargosModule,
         FabricaModule,
         UserModule,
         UserServiceModule,
@@ -43,7 +45,7 @@ import { FabricaServiceModule } from "@libs/lib/modules/fabrica/FabricaService.m
         FabricaController,
         UserController,
         ProducaoSimulacaoController,
-        ReplanejamentoController,
+        CargoController,
         PlanejamentoController,
         VirtualDateController
     ]

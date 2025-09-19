@@ -6,9 +6,9 @@ export class GerenciaCargo {
     @PrimaryGeneratedColumn()
     gerenciaCargoId: number;
 
-    @ManyToOne(() => User, (user) => user.gerencias, { eager: true })
+    @ManyToOne(() => User, (user) => user.cargos)
     user: User;
 
-    @ManyToOne(() => Cargo, (cargo) => cargo.gerencias, { eager: true })
+    @ManyToOne(() => Cargo, (cargo) => cargo.gerencias, { eager: true})
     cargo: Cargo;
 }

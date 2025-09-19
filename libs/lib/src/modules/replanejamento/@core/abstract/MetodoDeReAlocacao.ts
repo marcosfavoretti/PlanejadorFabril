@@ -1,45 +1,62 @@
 import { Calendario } from "@libs/lib/modules/shared/@core/classes/Calendario";
 import { IGerenciadorPlanejamentConsulta } from "@libs/lib/modules/fabrica/@core/interfaces/IGerenciadorPlanejamentoConsulta";
-import { RealocacaoProps } from "@libs/lib/modules/fabrica/@core/classes/RealocacaoProps";
-import { Fabrica } from "@libs/lib/modules/fabrica/@core/entities/Fabrica.entity";
 import { CODIGOSETOR } from "@libs/lib/modules/planejamento/@core/enum/CodigoSetor.enum";
-import { IVerificaCapacidade } from "@libs/lib/modules/fabrica/@core/interfaces/IVerificaCapacidade";
 import { RealocacaoParcial } from "@libs/lib/modules/planejamento/@core/classes/RealocacaoParcial";
+import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
+import { RealocacaoProps } from "@libs/lib/modules/fabrica/@core/classes/RealocaacoProps";
+import { ISelecionarItem } from "@libs/lib/modules/item/@core/interfaces/ISelecionarItem";
+import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/classes/PlanejamentoTemporario";
+
+
+export type HookRealocacaoProps = RealocacaoProps & {
+    setor: CODIGOSETOR,
+}
+
+export type RealocacaoComDepedenciaProps = HookRealocacaoProps & {
+    realocacaoUltSetor: RealocacaoParcial
+    itemContext: Item
+}
+
+export type RealocacaoSemDependenciaProps = HookRealocacaoProps & {
+    itemContext: Item
+}
 
 export abstract class MetodoDeReAlocacao {
     protected calendario: Calendario = new Calendario();
 
     constructor(
-        protected gerenciadorPlan: IGerenciadorPlanejamentConsulta
+        protected gerenciadorPlan: IGerenciadorPlanejamentConsulta,
+        protected Itemselecionador: ISelecionarItem
     ) { }
 
     protected abstract realocacao(
-        fabrica: Fabrica,
-        setor: CODIGOSETOR,
-        props: RealocacaoProps,
-        verificacao: IVerificaCapacidade,
+        props: RealocacaoSemDependenciaProps
     ): Promise<RealocacaoParcial>;
 
     protected abstract realocacaoComDepedencia(
-        fabrica: Fabrica,
-        setor: CODIGOSETOR,
-        props: RealocacaoProps,
-        verificacao: IVerificaCapacidade,
-        ultSetorPlan: RealocacaoParcial
+        props: RealocacaoComDepedenciaProps
     ): Promise<RealocacaoParcial>;
 
     public async hookRealocacao(
-        fabrica: Fabrica,
-        setor: CODIGOSETOR,
-        props: RealocacaoProps,
-        verificacao: IVerificaCapacidade,
-        planDoUltimoSetor?: RealocacaoParcial
+        props: HookRealocacaoProps
     ): Promise<RealocacaoParcial> {
-        if (planDoUltimoSetor && (planDoUltimoSetor.adicionado.length || planDoUltimoSetor.retirado.length)) {
-            return await this.realocacaoComDepedencia(fabrica, setor, props, verificacao, planDoUltimoSetor);
+        
+        const itemContext = this.Itemselecionador.seleciona(props.estrutura);
+
+        if (!itemContext) throw new Error('Não foi selecionado nenhuma item');
+
+        if (props.realocacaoUltSetor && (props.realocacaoUltSetor.adicionado.length || props.realocacaoUltSetor.retirado.length)) {
+            return await this.realocacaoComDepedencia({
+                ...props,
+                itemContext,
+                realocacaoUltSetor: props.realocacaoUltSetor || props.planFalho || []
+            });
         }
         else {
-            return await this.realocacao(fabrica, setor, props, verificacao);
+            return await this.realocacao({
+                ...props,
+                itemContext,
+            });
         }
     }
 }

@@ -35,6 +35,9 @@ import { MergeFabricaDto } from "@dto/MergeFabrica.dto";
 import { RequestFabricaMergeUseCase } from "@libs/lib/modules/fabrica/application/RequestFabricaMerge.usecase";
 import { ConsultaMergeRequestUseCase } from "@libs/lib/modules/fabrica/application/ConsultaMergeRequest.usecase";
 import { MergeRequestPendingDto } from "@dto/MergeRequestRes.dto";
+import { RolesGuard } from "@libs/lib/modules/cargos/@core/guards/VerificaCargo.guard";
+import { Roles } from "@libs/lib/modules/cargos/@core/decorator/Cargo.decorator";
+import { CargoEnum } from "@libs/lib/modules/cargos/@core/enum/CARGOS.enum";
 
 @UseGuards(
     JwtGuard
@@ -178,6 +181,8 @@ export class FabricaController {
         type: FabricaResponseDto,
     })
     @Post('/merge')
+    @Roles(CargoEnum.ADMIN, CargoEnum.PCP)
+    @UseGuards(RolesGuard)
     async mergeFabricaMethod(
         @Body() payload: MergeFabricaDto,
         @Req() req: CustomRequest
@@ -208,7 +213,10 @@ export class FabricaController {
     @Inject(ConsultaMergeRequestUseCase) private consultaMergeRequestUseCase: ConsultaMergeRequestUseCase;
     @ApiResponse({
         type: () => MergeRequestPendingDto,
+        isArray: true
     })
+    @Roles(CargoEnum.ADMIN, CargoEnum.PCP)
+    @UseGuards(RolesGuard)
     @Get('/merge/request')
     async getRequestsFabricaMergeMethod(): Promise<MergeRequestPendingDto[]> {
         return await this.consultaMergeRequestUseCase.consultar();
@@ -216,7 +224,7 @@ export class FabricaController {
 
 
     @Inject(ReplanejarPedidoUseCase) private replanejarPedidoUseCase: ReplanejarPedidoUseCase;
-    // @UseGuards(NaPrincipalNao)
+    @UseGuards(NaPrincipalNao)
     @Post('/fabrica/replanejamento')
     async ReplanejarPedidoUseCase(
         @Body() payload: ReplanejarPedidoDTO,

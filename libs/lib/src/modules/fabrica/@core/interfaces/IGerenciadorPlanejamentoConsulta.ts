@@ -5,14 +5,28 @@ import { Fabrica } from "../entities/Fabrica.entity";
 import { IVerificaCapacidade } from "./IVerificaCapacidade";
 
 export interface IGerenciadorPlanejamentConsulta {
-    // getPlanejamentoByPedido(fabrica: Fabrica, ...pedidos: Pedido[]): Promise<Planejamento[]>;
-    // diaComFolgaNaProducao(fabrica: Fabrica, pointerDate: Date, planejamento: Planejamento): Promise<Date[]>;
-    // diaParaAdiantarProducao(fabrica: Fabrica, dataPonteiro: Date, setor: CODIGOSETOR, item: Item, qtd: number, estrategiaVerificacao: IVerificaCapacidade,): Promise<Date>;
     possoAlocarQuantoNoDia(fabrica: Fabrica, dia: Date, setor: CODIGOSETOR, item: Item, estrategiaVerificacao: IVerificaCapacidade, planejamentosTemporarios?: PlanejamentoTemporario[]): Promise<number>;
     possoAlocarNoDia(fabrica: Fabrica, dia: Date, setor: CODIGOSETOR, item: Item, qtd: number, estrategiaVerificacao: IVerificaCapacidade, planejamentosTemporarios?: PlanejamentoTemporario[]): Promise<boolean>;
     diaParaAdiantarProducaoEncaixe(fabrica: Fabrica, dataPonteiro: Date, setor: CODIGOSETOR, item: Item, qtd: number, estrategiaVerificacao: IVerificaCapacidade, planejamentosTemporarios?: PlanejamentoTemporario[]): Promise<Date[]>;
     diaParaAdiarProducaoEncaixe(fabrica: Fabrica, dataPonteiro: Date, setor: CODIGOSETOR, item: Item, qtd: number, estrategiaVerificacao: IVerificaCapacidade, planejamentosTemporarios?: PlanejamentoTemporario[]): Promise<Date[]>;
-
+    /**
+     * 
+     * @param fabrica 
+     * @param dataPonteiro 
+     * @param setor 
+     * @param item 
+     * @description retorna dias com possibilidade de alocacao (qtd>0) e tambem quantidades possiveis de serem planejadas no mesmo
+     */
+    rangeDeDiasPossiveisRetroativos(
+        fabrica: Fabrica,
+        dataPonteiro: Date,
+        setor: CODIGOSETOR,
+        item: Item,
+        qtd: number,
+        estrategiaVerificacao: IVerificaCapacidade,
+        qtdDias?: number,
+        planTemp?: PlanejamentoTemporario[]
+    ): Promise<Map<Date, number>>;
 }
 
 export const IGerenciadorPlanejamentConsulta = Symbol('IGerenciadorPlanejamentConsulta');

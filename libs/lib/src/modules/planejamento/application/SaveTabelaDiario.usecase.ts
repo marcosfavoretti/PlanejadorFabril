@@ -12,7 +12,6 @@ export class SaveTabelaDiarioUseCase {
             });
             targetRow.produzido = dto.produzido;
             const change = await this.tabelaProducaoRepo.save(targetRow);
-            console.log(change)
         } catch (error) {
             if (error instanceof EntityNotFoundError) { throw new NotFoundException('Nao foi possivel encontrar o registro para mudança na tabela'); }
             console.error(error);

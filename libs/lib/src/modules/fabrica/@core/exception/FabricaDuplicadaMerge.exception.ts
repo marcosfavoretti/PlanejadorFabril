@@ -1,5 +1,5 @@
 export class FabricaDuplicadaMergeException extends Error {
     constructor(){
-        super('Fabrica duplicada merge exception');
+        super('Essa fabrica ja esta para ser avaliada!');
     }
 }

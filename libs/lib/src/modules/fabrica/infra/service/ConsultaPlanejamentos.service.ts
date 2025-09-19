@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { PlanejamentoSnapShotRepository } from "../repository/PlanejamentoSnapShot.repository";
 import { PlanejamentoSnapShot } from "../../@core/entities/PlanejamentoSnapShot.entity";
 import { Fabrica } from "../../@core/entities/Fabrica.entity";
-import { Between, In, MoreThanOrEqual } from "typeorm";
+import { Between, In, MoreThanOrEqual, Raw } from "typeorm";
 import { CODIGOSETOR } from "@libs/lib/modules/planejamento/@core/enum/CodigoSetor.enum";
 import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
 import { Pedido } from "@libs/lib/modules/pedido/@core/entities/Pedido.entity";
@@ -41,17 +41,6 @@ export class ConsultaPlanejamentoService {
         return await new PlanejamentoOverWriteByPedidoService().resolverOverwrite(planejamentos);
     }
 
-    async consultaPlanejamentosSnapShots(fabrica: Fabrica): Promise<PlanejamentoSnapShot[]> {
-        const fabricaSnapShots = await this.planejamentoSnapShotRepository.find({
-            where: {
-                fabrica: {
-                    fabricaId: fabrica.fabricaId
-                }
-            },
-        });
-        return fabricaSnapShots;
-    }
-
     //para ganho dee performace posso passar como um array nessa consulta para pesquisar tudo em uma vez no bacno
     async consultaPlanejamentoEspecifico(fabrica: Fabrica, planejamento: Planejamento, overwriteStrategy: IGerenciaOverwrite<PlanejamentoSnapShot>): Promise<PlanejamentoSnapShot> {
         const fabricasAlvos = await this.fabricaService.consultarFabricasAteCheckPoint(fabrica);
@@ -67,6 +56,7 @@ export class ConsultaPlanejamentoService {
             }
         });
         const [ultimoPlanejamento] = overwriteStrategy.resolverOverwrite(planejamentos);
+        if (!ultimoPlanejamento) throw new Error(`Não existe o planejamento ${planejamento.planejamentoId}`)
         return ultimoPlanejamento;
     }
 
@@ -150,6 +140,7 @@ export class ConsultaPlanejamentoService {
 
     async consultaPlanejamentoDia(fabrica: Fabrica, diaInicio: Date, overwriteStrategy: IGerenciaOverwrite<PlanejamentoSnapShot>, diaFinal?: Date): Promise<PlanejamentoSnapShot[]> {
         try {
+            console.log(diaInicio, diaFinal || this.calendario.finalDoDia(diaInicio))
             const fabricasAlvo = await this.fabricaService.consultarFabricasAteCheckPoint(fabrica);
             const snapShotCompleto = await this.planejamentoSnapShotRepository.find({
                 where: {
@@ -219,17 +210,16 @@ export class ConsultaPlanejamentoService {
                         setor: {
                             codigo: setor
                         },
-                        pedido: {
-                            item: {
-                                Item: item.Item
-                            }
+                        item: {
+                            Item: item.getCodigo()
                         },
-                        dia: dia
+                        dia: Raw(alias => `CAST(${alias} AS DATE) = :dia`, { dia })
                     }
                 }
             });
-            return overwriteStrategy
+            const snapshots = overwriteStrategy
                 .resolverOverwrite(snapShotCompleto);
+            return snapshots;
         } catch (error) {
             throw new Error(`Problemas ao consultar fabrica .consulta ${error}`)
         }

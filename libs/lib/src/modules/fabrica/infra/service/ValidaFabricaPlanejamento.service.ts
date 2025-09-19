@@ -7,7 +7,8 @@ import { PlanejamentoOverWriteByPedidoService } from "../../@core/services/Plane
 import { PlanejamentoSnapShot } from "../../@core/entities/PlanejamentoSnapShot.entity";
 import { FabricaPlanejadaErradaException } from "../../@core/exception/FabricaPlanejadaErrada.exception";
 
-export class ValidaFabricaPlanejamento implements IValidaFabrica {
+export class ValidaFabricaPlanejamento
+    implements IValidaFabrica {
 
     @Inject(BuscaPedidosService) private buscarPedido: BuscaPedidosService;
     @Inject(ConsultaPlanejamentoService) private consultaPlanejamentoService: ConsultaPlanejamentoService;
@@ -27,7 +28,7 @@ export class ValidaFabricaPlanejamento implements IValidaFabrica {
             const planejamentoDoPedido = map.get(pedido.id);
             if (!planejamentoDoPedido) throw new FabricaPlanejadaErradaException(fabrica);
             const totalPlanejadoQtd = planejamentoDoPedido.reduce((total, plan) => total += plan.planejamento.qtd, 0);
-            if(totalPlanejadoQtd<pedido.getLote()) throw new FabricaPlanejadaErradaException(fabrica);
+            if (totalPlanejadoQtd < pedido.getLote()) throw new FabricaPlanejadaErradaException(fabrica);
         }
     }
 }

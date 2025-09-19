@@ -19,7 +19,7 @@ export class Divida {
     @JoinColumn({ name: 'setorId' })
     setor: Setor;
 
-    @ManyToOne(() => Item)
+    @ManyToOne(() => Item, {eager: true})
     @JoinColumn({name: 'Item'})
     item: Item;
 

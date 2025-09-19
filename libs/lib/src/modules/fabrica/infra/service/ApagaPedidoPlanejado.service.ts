@@ -17,11 +17,9 @@ export class ApagaPedidoPlanejadoService {
             [pedido],
             new PlanejamentoOverWriteByPedidoService()
         );
-        for(const planejamento of planejamentos){
-            await this.gerenciadorPlanejamentoMutation.removePlanejamento(
-                fabrica,
-                [planejamento]
-            )
-        }
+        await this.gerenciadorPlanejamentoMutation.removePlanejamento(
+            fabrica,
+            planejamentos
+        )
     }
 }

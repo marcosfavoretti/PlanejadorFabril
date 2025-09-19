@@ -6,19 +6,18 @@ import { CODIGOSETOR } from "../enum/CodigoSetor.enum";
 import { IGerenciadorPlanejamentConsulta } from "@libs/lib/modules/fabrica/@core/interfaces/IGerenciadorPlanejamentoConsulta";
 import { VerificaBatelada } from "@libs/lib/modules/fabrica/@core/classes/VerificaBatelada";
 import { IVerificaCapacidade } from "@libs/lib/modules/fabrica/@core/interfaces/IVerificaCapacidade";
-import { ISelecionarItem } from "@libs/lib/modules/fabrica/@core/interfaces/ISelecionarItem";
-
-export class AlocaPorBatelada extends MetodoDeAlocacao {
-    private readonly BATELADASMAX!: number;
+import { ISelecionarItem } from "@libs/lib/modules/item/@core/interfaces/ISelecionarItem";
+export class AlocaPorBatelada
+    extends MetodoDeAlocacao {
 
     constructor(
+        private readonly numMaxBatelada: number,
         gerenciador: IGerenciadorPlanejamentConsulta,
         public selecionador: ISelecionarItem
     ) {
-        const bateladas_max = Number(process.env.BATELADAMAX);
-        if (!bateladas_max) throw new Error('um valor limite tem que ser informado');
+        console.log(`Batelada setada para ${numMaxBatelada}!`)
+        if (!numMaxBatelada) throw new Error('um valor limite tem que ser informado');
         super(gerenciador, selecionador);
-        this.BATELADASMAX = bateladas_max;
     }
 
     private ordenaPorMaisNovo(): (a, b) => number {
@@ -26,7 +25,7 @@ export class AlocaPorBatelada extends MetodoDeAlocacao {
     }
 
     verificacaoCapacidade(pedido: Pedido, codigoSetor: CODIGOSETOR): IVerificaCapacidade {
-        return new VerificaBatelada(this.BATELADASMAX);
+        return new VerificaBatelada(this.numMaxBatelada);
     }
 
     //para tirar isso deveria aplicar interfaces de maneira mais inteligente. E nao template pattern.:.refatoração
@@ -57,14 +56,14 @@ export class AlocaPorBatelada extends MetodoDeAlocacao {
             ) : necessidade.dia;
 
             const datasParaProgramar = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
-                props.fabrica, dataLimite, props.setor, props.pedido.item, precisoAlocar, new VerificaBatelada(this.BATELADASMAX), planejamentosTemporarios
+                props.fabrica, dataLimite, props.setor, props.pedido.item, precisoAlocar, new VerificaBatelada(this.numMaxBatelada), planejamentosTemporarios
             );
 
             console.log(`datas para suprir ${datasParaProgramar}`)
             const qtdMatriz: number[] = [];
 
             for (const data of datasParaProgramar) {
-                const response = await this.gerenciadorPlan.possoAlocarQuantoNoDia(props.fabrica, data, props.setor, props.pedido.item, new VerificaBatelada(this.BATELADASMAX), planejamentosTemporarios);
+                const response = await this.gerenciadorPlan.possoAlocarQuantoNoDia(props.fabrica, data, props.setor, props.pedido.item, new VerificaBatelada(this.numMaxBatelada), planejamentosTemporarios);
                 qtdMatriz.push(response);
             }
 

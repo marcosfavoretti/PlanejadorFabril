@@ -15,7 +15,7 @@ import { GerenciadorPlanejamento } from "./infra/service/GerenciadorPlanejamento
 import { SelecionaItemRops } from "./@core/classes/SelecionaItemRops";
 import { AlocaItensDependencias } from "../planejamento/@core/services/AlocaItensDependencias";
 import { SetorPinturaPo } from "../planejamento/@core/services/SetorPinturaPo";
-import { AlocaPorPinturaBatelada } from "../planejamento/@core/services/AlocaPorPinturaBatelada";
+import { RealocaPorBateladaService } from "../replanejamento/@core/service/RealocaPorBatelada.service";
 
 export const SetorFabricaProviders: Provider[] = [
     {
@@ -28,18 +28,42 @@ export const SetorFabricaProviders: Provider[] = [
         inject: [IGerenciadorPlanejamentConsulta]
     },
     {
+        provide: 'RealocaCapabiliadeMontagem',
+        useFactory: (g: IGerenciadorPlanejamentConsulta) => new RealocaPorCapabilidade(g, new SelecionaItem000()),
+        inject: [IGerenciadorPlanejamentConsulta]
+    },
+    {
+        provide: 'RealocaBateladaBanho',
+        useFactory: (g: IGerenciadorPlanejamentConsulta) => new RealocaPorBateladaService(Number(process.env.BATELADAMAX), g, new SelecionaItemRops()),
+        inject: [IGerenciadorPlanejamentConsulta]
+    },
+    {
+        provide: 'RealocaBateladaPintura',
+        useFactory: (g: IGerenciadorPlanejamentConsulta) => new RealocaPorBateladaService(Number(process.env.PINTURAMAX), g, new SelecionaItemRops()),
+        inject: [IGerenciadorPlanejamentConsulta]
+    },
+    {
+        provide: 'RealocaCapabiliadeRops',
+        useFactory: (g: IGerenciadorPlanejamentConsulta) => new RealocaPorCapabilidade(g, new SelecionaItemRops()),
+        inject: [IGerenciadorPlanejamentConsulta]
+    },
+    {
         provide: 'AlocaCapabilidadeRops',
         useFactory: (g: IGerenciadorPlanejamentConsulta) => new AlocaPorCapabilidade(g, new SelecionaItemRops()),
         inject: [IGerenciadorPlanejamentConsulta]
     },
     {
         provide: 'AlocaPorPinutraRops',
-        useFactory: (g: IGerenciadorPlanejamentConsulta) => new AlocaPorPinturaBatelada(g, new SelecionaItemRops()),
+        useFactory: (g: IGerenciadorPlanejamentConsulta) => {
+            return new AlocaPorBatelada(Number(process.env.PINTURAMAX), g, new SelecionaItemRops())
+        },
         inject: [IGerenciadorPlanejamentConsulta]
     },
     {
         provide: 'AlocaPorBateladaRops',
-        useFactory: (g: IGerenciadorPlanejamentConsulta) => new AlocaPorBatelada(g, new SelecionaItemRops()),
+        useFactory: (g: IGerenciadorPlanejamentConsulta) => {
+            return new AlocaPorBatelada(Number(process.env.BATELADAMAX), g, new SelecionaItemRops())
+        },
         inject: [IGerenciadorPlanejamentConsulta]
     },
     AlocaItensDependencias,
@@ -54,7 +78,7 @@ export const SetorFabricaProviders: Provider[] = [
                 metodoDeReAlocacao,
             );
         },
-        inject: ['AlocaCapabilidadeRops', RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaCapabilidadeRops', 'RealocaCapabiliadeRops'], // Adicione aqui os providers que você quer injetar como dependências
     },
     {
         provide: SetorSolda,
@@ -67,7 +91,7 @@ export const SetorFabricaProviders: Provider[] = [
                 metodoDeReAlocacao,
             );
         },
-        inject: ['AlocaCapabilidadeRops', RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaCapabilidadeRops', 'RealocaCapabiliadeRops'], // Adicione aqui os providers que você quer injetar como dependências
     },
     {
         provide: SetorPinturaPo,
@@ -80,7 +104,7 @@ export const SetorFabricaProviders: Provider[] = [
                 metodoDeReAlocacao,
             );
         },
-        inject: ['AlocaCapabilidadeRops', RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaCapabilidadeRops', 'RealocaCapabiliadeRops'], // Adicione aqui os providers que você quer injetar como dependências
     },
     {
         provide: SetorBanho,
@@ -93,7 +117,7 @@ export const SetorFabricaProviders: Provider[] = [
                 metodoDeReAlocacao,
             );
         },
-        inject: ['AlocaPorBateladaRops', RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaPorBateladaRops', 'RealocaCapabiliadeRops'], // Adicione aqui os providers que você quer injetar como dependências
     },
     {
         provide: SetorPinturaLiq,
@@ -106,7 +130,7 @@ export const SetorFabricaProviders: Provider[] = [
                 metodoDeReAlocacao,
             );
         },
-        inject: ['AlocaPorPinutraRops', RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaPorPinutraRops', 'RealocaCapabiliadeRops'], // Adicione aqui os providers que você quer injetar como dependências
     },
     {
         provide: SetorMontagem,
@@ -119,6 +143,6 @@ export const SetorFabricaProviders: Provider[] = [
                 metodoDeReAlocacao,
             );
         },
-        inject: ['AlocaCapabilidadeMontagem', RealocaPorCapabilidade], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaCapabilidadeMontagem', 'RealocaCapabiliadeMontagem'], // Adicione aqui os providers que você quer injetar como dependências
     },
 ];

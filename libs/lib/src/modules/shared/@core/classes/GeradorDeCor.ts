@@ -7,8 +7,8 @@ export class ColorGenerator {
     this.palette = [
 
       // Tons mais suaves
-      "#add8e6", "#f0e68c", "#e0ffff", "#f5f5dc", "#d8bfd8",
-      "#ffe4e1", "#fafad2", "#e9967a", "#afeeee", "#eee8aa",
+      "#add8e6", "#f0e68c", "#e0ffff", "#d8bfd8",
+      "#fafad2", "#e9967a", "#afeeee", "#eee8aa",
       "#f5deb3", "#b0c4de", "#d3d3d3", "#f0fff0", "#ffe4b5",
       // Tons vibrantes
       "#ffe019ff", "#0082c8", "#f58231",

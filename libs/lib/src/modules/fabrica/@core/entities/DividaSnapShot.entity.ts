@@ -8,7 +8,7 @@ export class DividaSnapShot {
     @PrimaryGeneratedColumn()
     dividaSnapShotId: number;
 
-    @ManyToOne(() => Fabrica)
+    @ManyToOne(() => Fabrica, {nullable: false})
     @JoinColumn({ name: 'fabricaId' })
     fabrica: Fabrica;
 
@@ -29,7 +29,6 @@ export class DividaSnapShot {
         novo.fabrica = this.fabrica;
         novo.origem = this.origem;
         novo.divida = this.divida;
-        console.log(this.divida)
         return novo;
     }
 

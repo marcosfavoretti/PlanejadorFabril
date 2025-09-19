@@ -26,24 +26,25 @@ export class EfetivaPlanejamentoService {
   ): Promise<PlanejamentoSnapShot[]> {
     try {
       // resolve todos os snapshots em paralelo
-      const novosSnapshots = await Promise.all(
+      const novosSnapshots =
         planejamentosTemporarios.map((planejamentoTemp) =>
           this.criarSnapshot(fabrica, planejamentoTemp),
-        ),
-      );
+        );
+
+      console.log('quero ver', planejamentosTemporarios)
 
       // busca os snapshots já existentes
-      const snapshotsExistentes = await this.planejamentoSnapShotRepository.find({
-        where: { fabrica: { fabricaId: fabrica.fabricaId } },
-      });
+      // const snapshotsExistentes = await this.planejamentoSnapShotRepository.find({
+      //   where: { fabrica: { fabricaId: fabrica.fabricaId } },
+      // });
 
       // atualiza a fabrica com todos
-      fabrica.appendPlanejamento([...novosSnapshots, ...snapshotsExistentes]);
-      console.log(novosSnapshots)
-      const fabricaAtualizada = await this.fabricaService.saveFabrica(fabrica);
+      // const fabricaAtualizada = await this.fabricaService.saveFabrica(fabrica);
 
-      return fabricaAtualizada.planejamentoSnapShots;
+      const snapShotsSalvos = await this.planejamentoSnapShotRepository.save(novosSnapshots);
+      return snapShotsSalvos;
     } catch (error) {
+      console.error(error);
       throw new Error(`Problemas para salvar o planejamento: ${(error as Error).message}`);
     }
   }
@@ -60,14 +61,15 @@ export class EfetivaPlanejamentoService {
   /**
    * Cria um snapshot resolvendo o item conforme o setor
    */
-  private async criarSnapshot(
+  private criarSnapshot(
     fabrica: Fabrica,
     planejamentoTemp: PlanejamentoTemporario,
-  ): Promise<PlanejamentoSnapShot> {
+  ): PlanejamentoSnapShot {
+
     const acao = this.resolveAcao(planejamentoTemp.qtd);
 
     return this.planejamentoSnapShotRepository.create({
-      fabrica,
+      fabrica: fabrica,
       planejamento: {
         ...planejamentoTemp,
         item: planejamentoTemp.item,

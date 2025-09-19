@@ -3,17 +3,31 @@ import { DividaService } from "./Divida.service";
 import { Divida } from "../../@core/entities/Divida.entity";
 import { Fabrica } from "../../@core/entities/Fabrica.entity";
 import { Pedido } from "@libs/lib/modules/pedido/@core/entities/Pedido.entity";
-import { ICalculoDivida } from "../../@core/interfaces/ICalculoDivida";
-import { CODIGOSETOR } from "@libs/lib/modules/planejamento/@core/enum/CodigoSetor.enum";
+import { CalculaDividaDoPlanejamentoProps, ICalculoDivida } from "../../@core/interfaces/ICalculoDivida";
 import { SnapShotEstados } from "../../@core/enum/SnapShotEstados.enum";
+import { ISetStrategy } from "../../@core/interfaces/IStrategySet";
+import { DividaBuilder } from "../../@core/builder/Divida.builder";
 
-export class GerenciaDividaService {
+export class GerenciaDividaService
+    implements ISetStrategy<ICalculoDivida> {
+
     constructor(
-        @Inject(DividaService) private dividaService: DividaService
+        @Inject(DividaService) private dividaService: DividaService,
+        @Inject(ICalculoDivida) private calculoDivida: ICalculoDivida
     ) { }
+
+    setStrategy(strategy: ICalculoDivida): void {
+        this.calculoDivida = strategy;
+    }
 
     async apagarDividas(fabrica: Fabrica, pedido: Pedido): Promise<void> {
         await this.dividaService.removerDividaNaFabricaDoPedido(fabrica, pedido);
+    }
+
+
+    async adicionaDividas(fabrica: Fabrica, dividas: Divida[]): Promise<void> {
+        //TODO improve: melhor tirar ou juntar esse metodo com o resolver divida
+        return await this.dividaService.addDivida(fabrica, dividas, SnapShotEstados.base, 'calculo');
     }
 
     /**
@@ -23,37 +37,22 @@ export class GerenciaDividaService {
     * @description Metodo que com base na estrategia vai ver se precisa incrementar ou decrementar a divida. Caso for preciso alguma ação ele ja chamara o metodo do repositorio 
     * @returns 
     */
-    async resolverDividasParaSalvar(fabrica: Fabrica, pedido: Pedido, estrategia: ICalculoDivida): Promise<Divida[]> {//esse metodo logo nao podera mais executar a interface dentro dele
+    async resolverDividas(props: CalculaDividaDoPlanejamentoProps): Promise<Divida[]> {//esse metodo logo nao podera mais executar a interface dentro dele
         try {
-            const dividasCalculadas = await estrategia.calc();
-
-            console.log('->', dividasCalculadas);
-
-            const dividasTotalizadas = await this.dividaService.consultarDividaTotalizadaDoPedido(fabrica, pedido);
-
-            const dividaBancoMap = new Map<CODIGOSETOR, number>();
-
-            for (const { qtd, setorCodigo } of dividasTotalizadas) {
-                dividaBancoMap.set(setorCodigo, qtd);
-            }
-
-            const dividasParaSalvar: Partial<Divida>[] = dividasCalculadas.map((dividaCalculada: Divida) => {
-                const dividaBanco = dividaBancoMap.get(dividaCalculada.setor.codigo) ?? 0;
-                console.log(dividaBanco, dividaCalculada.qtd)
-                const qtdFinal = dividaCalculada.qtd + dividaBanco//< 0 ? dividaCalculada.qtd + dividaBanco : dividaCalculada.qtd - dividaBanco
-                return {
-                    ...dividaCalculada,
-                    qtd: qtdFinal,
-                    pedido,
-                    fabrica,
-                };
-            });
-
-            const dividasSnapShot = await this.dividaService.addDivida(
-                fabrica, dividasParaSalvar, SnapShotEstados.base, 'calculo'
+            //TODO IMPROVE: para tentar deixar menos custoso isso
+            const dividas = await this.calculoDivida.calc(props);
+            await this.dividaService.removerDividaNaFabricaDoPedido(props.fabrica, props.pedido);
+            const dividasParaAlterar: Divida[] = [];
+            dividas.forEach(divida =>
+                dividasParaAlterar.push(
+                    new DividaBuilder()
+                        .item(divida.item)
+                        .pedido(divida.pedido)
+                        .qtd(divida.qtd)
+                        .setor(divida.setor.codigo)
+                        .build())
             );
-
-            return dividasSnapShot.map(d => d.divida);
+            return dividasParaAlterar;
 
         } catch (error) {
             console.error(error)

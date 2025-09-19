@@ -3,7 +3,7 @@ import { ConsultaPlanejamentoService } from "../infra/service/ConsultaPlanejamen
 import { ConsultaPlanejamentosDTO } from "@dto/ConsultaPlanejamentos.dto";
 import { FabricaService } from "../infra/service/Fabrica.service";
 import { PlanejamentoResponseDTO } from "@dto/PlanejamentoResponse.dto";
-import { parse } from "date-fns";
+import { parse, startOfDay } from "date-fns";
 import { PlanejamentoOverWriteByPedidoService } from "../@core/services/PlanejamentoOverWriteByPedido.service";
 
 export class ConsultarPlanejamentosUseCase {
@@ -15,10 +15,9 @@ export class ConsultarPlanejamentosUseCase {
     async consultar(dto: ConsultaPlanejamentosDTO): Promise<PlanejamentoResponseDTO[]> {
         try {
             const fabrica = await this.fabricaService.consultaFabrica(dto.fabricaId);
-            console.log(dto.dataFinal, dto.dataInicial)
             const planejamentos = await this.consultaPlanejamento.consultaPlanejamentoDia(
                 fabrica,
-                dto.dataInicial,
+                startOfDay(dto.dataInicial),
                 new PlanejamentoOverWriteByPedidoService(),
                 dto?.dataFinal ? dto.dataFinal : undefined
             );

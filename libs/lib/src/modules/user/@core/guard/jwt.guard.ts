@@ -39,6 +39,7 @@ export class JwtGuard implements CanActivate {
       }
 
       const decodedToken = this.jwtHandler.decodeToken(accessToken) as User;
+      console.log(decodedToken);
       const user = await this.userService.getUser(decodedToken.id);
       if (!user) {
         return false;

@@ -1,5 +1,4 @@
 import { Inject } from "@nestjs/common";
-import { DividaRepository } from "../repository/Divida.repository";
 import { Divida } from "../../@core/entities/Divida.entity";
 import { Fabrica } from "../../@core/entities/Fabrica.entity";
 import { Pedido } from "@libs/lib/modules/pedido/@core/entities/Pedido.entity";
@@ -16,11 +15,15 @@ import { DividaOverWriteByPedido } from "../../@core/services/DividaOverWriteByP
 export class DividaService {
     constructor(
         @Inject(DividaSnapShotRepository) private dividaSnapShotRepository: DividaSnapShotRepository,
-        @Inject(DividaRepository) private dividaRepository: DividaRepository,
         @Inject(FabricaService) private fabricaService: FabricaService
     ) { }
 
-    async addDivida(fabrica: Fabrica, dividas: Partial<Divida>[], tipo: SnapShotEstados, origem: 'manual' | 'calculo' | 'falha_alocacao'): Promise<DividaSnapShot[]> {
+    async addDivida(
+        fabrica: Fabrica,
+        dividas: Divida[],
+        tipo: SnapShotEstados,
+        origem: 'manual' | 'calculo' | 'falha_alocacao'
+    ): Promise<void> {
         const dividasSnapShot = dividas.map(
             divida => this.dividaSnapShotRepository.create({
                 fabrica: fabrica,
@@ -28,13 +31,13 @@ export class DividaService {
                 origem: origem,
                 tipo: divida.qtd && divida.qtd === 0 ? SnapShotEstados.delete : SnapShotEstados.base,
             })
-        )
-        return await this.dividaSnapShotRepository.save(dividasSnapShot);
+        );
+        await this.dividaSnapShotRepository.save(dividasSnapShot);
     }
 
-    async consultarDividaDoPedido(fabrica: Fabrica, pedido: Pedido): Promise<DividaSnapShot[]> {
+    async consultarDividaDoPedido(fabrica: Fabrica, ...pedido: Pedido[]): Promise<DividaSnapShot[]> {
         const fabricas = await this.fabricaService.consultarFabricasAteCheckPoint(fabrica);
-
+        const pedidosids = pedido.map(ped => ped.id);
         const dividas = await this.dividaSnapShotRepository.find({
             where: {
                 fabrica: {
@@ -42,7 +45,7 @@ export class DividaService {
                 },
                 divida: {
                     pedido: {
-                        id: pedido.id
+                        id: In(pedidosids)
                     },
                 },
             },
@@ -51,11 +54,10 @@ export class DividaService {
         return new DividaOverWriteByPedido().resolverOverwrite(dividas);
     }
 
+
     async consultarDividaTotalizadaDoPedido(fabrica: Fabrica, pedido: Pedido): Promise<{ qtd: number, setorCodigo: CODIGOSETOR }[]> {
         const fabricas = await this.fabricaService.consultarFabricasAteCheckPoint(fabrica);
-
         const dividaPorSetor = new Map<CODIGOSETOR, DividaSnapShot[]>();
-
         const dividas = await this.dividaSnapShotRepository.find({
             where: {
                 fabrica: {
@@ -69,9 +71,7 @@ export class DividaService {
             },
 
         });
-
         const dividasResolvidas = new DividaOverWriteByPedido().resolverOverwrite(dividas);
-
         dividasResolvidas.forEach(divida => {
             if (dividaPorSetor.has(divida.divida.setor.codigo)) {
                 const dividas = dividaPorSetor.get(divida.divida.setor.codigo) || [];
@@ -111,16 +111,14 @@ export class DividaService {
                 }
             }
         );
-        return new DividaOverWriteByPedido().resolverOverwrite(dividas);
-
+        return new DividaOverWriteByPedido()
+            .resolverOverwrite(dividas);
     }
 
     async removerDividaNaFabricaDoPedido(fabrica: Fabrica, pedido: Pedido): Promise<void> {
         const dividasNoBanco = await this.consultarDividaDoPedido(fabrica, pedido);
-        const dividasNoBancoCopia = dividasNoBanco.map(d=> d.copy());
-        const dividasNoBancoResolvidas = new DividaOverWriteByPedido().resolverOverwrite(dividasNoBancoCopia);
-        dividasNoBancoResolvidas.forEach(d=> d.tipo === SnapShotEstados.delete);
-        fabrica.appendDividas(dividasNoBancoResolvidas);
-        this.fabricaService.saveFabrica(fabrica);
+        const dividaParaApagar = dividasNoBanco.map((divida) => divida.copy());
+        dividaParaApagar.forEach(d => { d.tipo = SnapShotEstados.delete; d.fabrica = fabrica });
+        await this.dividaSnapShotRepository.save(dividaParaApagar);
     }
 }

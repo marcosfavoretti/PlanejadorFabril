@@ -7,6 +7,6 @@ export class ConsultartPorPedidoDto{
     fabricaId: string;
 
     @ApiProperty()
-    @IsNumber()
+    @IsString()
     pedidoId: number;
 }

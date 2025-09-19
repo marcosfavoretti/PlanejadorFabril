@@ -32,22 +32,14 @@ import { ValidaData } from "./@core/services/ValidaData";
 import { SetorFabricaProviders } from "./SetorFabrica.provider";
 import { DividaSnapShotRepository } from "./infra/repository/DividaSnapShot.repository";
 import { GerenciaDividaService } from "./infra/service/GerenciaDivida.service";
-import { AlocaPorBatelada } from "../planejamento/@core/services/AlocaPorBatelada";
 import { DividaCheckPoint } from "./infra/service/DividaCheckpoint.service";
 import { SetorChainFactoryService } from "./@core/services/SetorChainFactory.service";
 import { PlanejamentoServiceModule } from "../planejamento/PlanejamentoService.module";
 import { ApagaPedidoPlanejadoService } from "./infra/service/ApagaPedidoPlanejado.service";
 import { ReplanejarPedidoUseCase } from "./application";
 import { PedidoServiceModule } from "../pedido/PedidoService.module";
-import { IConverteItem } from "../item/@core/interfaces/IConverteItem";
 import { ItemServiceModule } from "../item/ItemService.module";
-import { IConsultaRoteiro } from "./@core/interfaces/IConsultaRoteiro";
-import { EstruturaNeo4jApiService } from "./infra/service/EstruturaNeo4jApi.service";
-import { IConsultarRoteiroPrincipal } from "./@core/interfaces/IConsultarRoteiroPrincipal";
-import { RoteiroPrincipal } from "./infra/service/RoteiroPrinciapal.service";
-import { IBuscarItemDependecias } from "../item/@core/interfaces/IBuscarItemDependecias";
 import { BuscaPedidosService } from "./infra/service/BuscaPedidos.service";
-import { IMontaEstrutura } from "./@core/interfaces/IMontaEstrutura.ts";
 import { OnNovoPlanejamentoProvider } from "./OnNovoPlanejamento.provider";
 import { ValidadorPlanejamento, ValidadorPlanejamentoProvider } from "./ValidaPlenejamento.provider";
 import { ValidaFabricaProvider } from "./ValidaFabrica.provider";
@@ -55,7 +47,10 @@ import { ValidaFabricaPai } from "./infra/service/ValidaFabricaPai.service";
 import { ValidaFabricaPlanejamento } from "./infra/service/ValidaFabricaPlanejamento.service";
 import { MergeRequestService } from "./infra/service/MergeRequest.service";
 import { MergeRequestRepository } from "./infra/repository/MergeRequest.repository";
-
+import { ICalculoDivida } from "./@core/interfaces/ICalculoDivida";
+import { CalculaDividaDoPlanejamento } from "./@core/services/CalculaDividaDoPlanejamento";
+import { config } from "dotenv";
+config()
 @Module({
     imports: [
         PlanejamentoServiceModule,
@@ -72,8 +67,6 @@ import { MergeRequestRepository } from "./infra/repository/MergeRequest.reposito
         OnNovoPlanejamentoProvider,
         ...SetorFabricaProviders,
         RealocaPorCapabilidade,
-        AlocaPorBatelada,
-        AlocaPorCapabilidade,
         DividaService,
         DividaRepository,
         MercadoSnapShotRepository,
@@ -91,24 +84,8 @@ import { MergeRequestRepository } from "./infra/repository/MergeRequest.reposito
         PlanejamentoValidatorExecutorService,
         ValidaData,
         {
-            provide: IMontaEstrutura,
-            useClass: EstruturaNeo4jApiService
-        },
-        {
-            provide: IConsultaRoteiro,
-            useClass: EstruturaNeo4jApiService
-        },
-        {
-            provide: IBuscarItemDependecias,
-            useClass: EstruturaNeo4jApiService
-        },
-        {
-            provide: IConsultarRoteiroPrincipal,
-            useClass: RoteiroPrincipal
-        },
-        {
-            provide: IConverteItem,
-            useClass: EstruturaNeo4jApiService
+            provide: ICalculoDivida,
+            useClass: CalculaDividaDoPlanejamento
         },
         {
             provide: IGerenciadorPlanejamentConsulta,
@@ -152,7 +129,6 @@ import { MergeRequestRepository } from "./infra/repository/MergeRequest.reposito
         OnNovoPlanejamentoProvider,
         GerenciaDividaService,
         ReplanejarPedidoUseCase,
-        IConverteItem,
         DividaSnapShotRepository,
         DividaService,
         RealocaPorCapabilidade,

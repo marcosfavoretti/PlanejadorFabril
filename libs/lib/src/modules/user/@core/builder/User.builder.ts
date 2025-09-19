@@ -1,3 +1,4 @@
+import { Cargo } from "@libs/lib/modules/cargos/@core/entities/Cargo.entity";
 import { User } from "../entities/User.entity";
 
 export class UserBuilder {
@@ -7,12 +8,12 @@ export class UserBuilder {
     private password: string;
     private avatar?: string;
     private created?: Date;
-
     withId(id: string): UserBuilder {
         this.id = id;
         return this;
     }
 
+    
     withName(name: string): UserBuilder {
         this.name = name;
         return this;

@@ -1,6 +1,6 @@
 import { ConsultaPlanejamentoService } from "@libs/lib/modules/fabrica/infra/service/ConsultaPlanejamentos.service";
 import { Inject } from "@nestjs/common";
-import { IOptimizer } from "../../shared/@core/interfaces/IOptimizer";
+import { IOptimizer } from "../../../../../../libs/lib/src/modules/ag/@core/interface/IOptimizer";
 
 export class AgOptimizerUseCase implements IOptimizer {
     @Inject(ConsultaPlanejamentoService) private consultaPlanejamentos: ConsultaPlanejamentoService;

@@ -1,7 +1,6 @@
 import { Inject, InternalServerErrorException } from "@nestjs/common";
 import { BuscaPedidosService } from "../infra/service/BuscaPedidos.service";
 import { FabricaService } from "../infra/service/Fabrica.service";
-import { InputPedidosDTO } from "@libs/lib/dtos/InputPedidos.dto";
 import { ConsultaPlanejamentoService } from "../infra/service/ConsultaPlanejamentos.service";
 import { PlanejamentoOverWriteByPedidoService } from "../@core/services/PlanejamentoOverWriteByPedido.service";
 import { EfetivaPlanejamentoService } from "../infra/service/EfetivaPlanejamento.service";
@@ -34,7 +33,6 @@ export class DesplanejarPedidoUseCase {
 
     private verificaIdsPlanejados(idsInput: number[], idsBanco: number[]): boolean {
         const response = idsInput.every(inputPedido => idsBanco.includes(inputPedido));
-        console.log(response);
         return response;
     }
 }

@@ -4,7 +4,8 @@ import { PlanejamentoSnapShot } from "./PlanejamentoSnapShot.entity";
 import { MercadoSnapShot } from "./MercadoSnapShot.entity";
 import { FabricaBuilder } from "../builder/Fabrica.builder";
 import { DividaSnapShot } from "./DividaSnapShot.entity";
-
+import { config } from "dotenv";
+config();
 @Entity({ name: 'fabrica' })
 export class Fabrica {
     @PrimaryGeneratedColumn('uuid')

@@ -16,7 +16,7 @@ export class PlanejamentoOverWriteByPedidoService implements IGerenciaOverwrite<
             const resultadoMap = new Map<string, PlanejamentoSnapShot>();
             for (const snapshot of data) {
                 const item = snapshot.planejamento.item.Item;
-                const dia = snapshot.planejamento.dia.toISOString();
+                const dia = snapshot.planejamento.dia.toISOString().slice(0, 10); // só AAAA-MM-DD
                 const setor = snapshot.planejamento.setor.codigo;
                 const pedido = snapshot.planejamento.pedido.id;
                 const key = `${item}|${dia}|${setor}|${pedido}`;

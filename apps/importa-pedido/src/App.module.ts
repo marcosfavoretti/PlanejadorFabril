@@ -6,6 +6,8 @@ import { PedidoServiceModule } from "@libs/lib/modules/pedido/PedidoService.modu
 import { FabricaModule } from "@libs/lib/modules/fabrica/Fabrica.module";
 import { TypeormDevConfigModule } from "@libs/lib/config/TypeormDevConfig.module";
 import { PedidoLogixDAO } from "./infra/service/PedidosLogix.dao";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { BullModule } from "@nestjs/bull";
 import { typeormSynecoConfig } from "@libs/lib/config/TypeormSynecoConfig.module";
 
 @Module({
@@ -13,8 +15,11 @@ import { typeormSynecoConfig } from "@libs/lib/config/TypeormSynecoConfig.module
         ScheduleModule.forRoot(),
         PedidoServiceModule,
         TypeormDevConfigModule,
-        typeormSynecoConfig([]),
         FabricaModule,
+        BullModule.registerQueue({
+            name: 'planejamento',
+        }),
+        typeormSynecoConfig([])
     ],
     providers: [
         PedidoLogixDAO,

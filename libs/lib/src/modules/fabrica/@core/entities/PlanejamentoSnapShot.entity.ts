@@ -19,10 +19,10 @@ export class PlanejamentoSnapShot {
   fabrica: Fabrica;
 
   @ManyToOne(() => Planejamento, { eager: true, cascade: ['insert'] })
-  @JoinColumn({ name: 'planejamentoId' }) 
+  @JoinColumn({ name: 'planejamentoId' })
   planejamento: Planejamento;
 
-  @Column({ default: 'base', type: 'varchar'})
+  @Column({ default: 'base', type: 'varchar' })
   tipoAcao: SnapShotEstados;
 
   copy(): PlanejamentoSnapShot {
@@ -30,6 +30,10 @@ export class PlanejamentoSnapShot {
     novo.tipoAcao = this.tipoAcao;
     novo.planejamento = this.planejamento;
     return novo;
+  }
+
+  ehAtrasado(): boolean {
+    return this.planejamento.dia.getTime() > this.planejamento.pedido.getSafeDate().getTime();
   }
 
   deepCopy(): PlanejamentoSnapShot {

@@ -7,6 +7,7 @@ import { UserNotFoundException } from "../../@core/exceptions/UserNotFound.excep
 import { AutenticationService } from "./Autentication.service";
 import { IAutentication } from "../../@core/abstract/IAutentication";
 import { AuthDto } from "@libs/lib/dtos/Auth.dto";
+import { plainToInstance } from "class-transformer";
 
 @Injectable()
 export class UserService implements IUserService {
@@ -58,7 +59,7 @@ export class UserService implements IUserService {
             }
         });
         if (!user) throw new UserNotFoundException();
-        return user;
+        return plainToInstance(User, user);
     }
 
     async saveUser(user: User): Promise<User> {

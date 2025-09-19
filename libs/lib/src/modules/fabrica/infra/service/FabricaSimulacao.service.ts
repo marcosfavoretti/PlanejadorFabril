@@ -10,15 +10,15 @@ import { ConsultaPlanejamentoService } from "./ConsultaPlanejamentos.service";
 import { PlanejamentoOverWriteByPedidoService } from "../../@core/services/PlanejamentoOverWriteByPedido.service";
 import { Calendario } from "@libs/lib/modules/shared/@core/classes/Calendario";
 import { SetorChainFactoryService } from "../../@core/services/SetorChainFactory.service";
-import { IConsultarRoteiroPrincipal } from "../../@core/interfaces/IConsultarRoteiroPrincipal";
+import { IConsultarRoteiroPrincipal } from "../../../item/@core/interfaces/IConsultarRoteiroPrincipal";
 import { SetorService } from "@libs/lib/modules/planejamento/@core/abstract/SetorService";
-import { IConsultaRoteiro } from "../../@core/interfaces/IConsultaRoteiro";
+import { IConsultaRoteiro } from "../../../item/@core/interfaces/IConsultaRoteiro";
 import { AlocaItensDependencias } from "@libs/lib/modules/planejamento/@core/services/AlocaItensDependencias";
 import { SelecionaItemDep } from "../../@core/classes/SelecionaItemDep";
 import { IGerenciadorPlanejamentConsulta } from "../../@core/interfaces/IGerenciadorPlanejamentoConsulta";
-import { IMontaEstrutura } from "../../@core/interfaces/IMontaEstrutura.ts";
+import { IMontaEstrutura } from "../../../item/@core/interfaces/IMontaEstrutura.ts";
 import { FabricaReplanejamentoResultado } from "../../@core/classes/FabricaReplanejamentoResultado";
-import { ItemEstruturado } from "../../@core/classes/ItemEstruturado";
+import { ItemEstruturado } from "../../../item/@core/classes/ItemEstruturado";
 
 export class FabricaSimulacaoService {
 
@@ -53,6 +53,7 @@ export class FabricaSimulacaoService {
                 const planoAjustado = await this.arrumaRangeDoPlanejamento({
                     fabrica,
                     pedido,
+                    itemEstruct: estrutura,
                     pipeProducao: pipePrincipal,
                     planPivot: pivot,
                     planOriginal: planInicial
@@ -112,8 +113,11 @@ export class FabricaSimulacaoService {
         for (const item of [...estrutura.itensDependencia]) {
             estrutura.ordenaDependencias(item);
 
-            const setoresDoItem = await this.consultaRoteiro.roteiro(item);
-            const pipe = this.setorChainFactoryService.modificarCorrente(setoresDoItem);
+            const setoresDoItem = await this.consultaRoteiro
+                .roteiro(item);
+
+            const pipe = this.setorChainFactoryService
+                .modificarCorrente(setoresDoItem);
 
             this.setorChainFactoryService.setMetodoDeAlocacaoCustomTodos(
                 pipe,
@@ -145,10 +149,7 @@ export class FabricaSimulacaoService {
                 const planejamentosDoPedidoEmBanco = await this.consultaPlanejamentoService
                     .consultaPorPedido(fabrica, [realocacao.pedido], new PlanejamentoOverWriteByPedidoService());
 
-                const planejamentosAlvos = planejamentosDoPedidoEmBanco.filter(plan =>
-                    isSameDay(plan.planejamento.dia, realocacao.dia) ||
-                    isAfter(plan.planejamento.dia, realocacao.dia)
-                );
+                const planejamentosAlvos = planejamentosDoPedidoEmBanco;
 
                 const estrutura = await this.montaEstruturaEstrategia.monteEstrutura(realocacao.pedido.item);
 
@@ -161,16 +162,16 @@ export class FabricaSimulacaoService {
                     .getSetorInChain(realocacao.setor);
 
                 const { adicionado, retirado } = await setorAlvo.realocar(
-                    fabrica, {
-                    pedido: realocacao.pedido,
-                    novaData: novaData ? novaData : this.calendario.proximoDiaUtilReplanejamento(new Date()),
-                    planejamentoFalho: realocacao,
-                    planejamentoPedido: planejamentosAlvos.map(p => PlanejamentoTemporario.createByEntity(p)),
-                });
+                    {
+                        estrutura: estrutura,
+                        fabrica: fabrica,
+                        novoDia: novaData ? novaData : this.calendario.proximoDiaUtilReplanejamento(new Date()),
+                        pedido: realocacao.pedido,
+                        planFalho: realocacao,
+                        planDoPedido: planejamentosAlvos.map(PlanejamentoTemporario.createByEntity),
+                    }
+                );
 
-                //salvamento do planejamento & validacao final
-                console.log('RESULTA FINAL', adicionado);
-                //\\
                 planejamentosTemporarios.push(...adicionado);
                 planejamentosTemporariosRetirados.push(...retirado);
             }
@@ -205,6 +206,7 @@ export class FabricaSimulacaoService {
     private async arrumaRangeDoPlanejamento(props: {
         fabrica: Fabrica,
         pedido: Pedido,
+        itemEstruct: ItemEstruturado,
         planOriginal: PlanejamentoTemporario[],
         planPivot: PlanejamentoTemporario,
         pipeProducao: SetorService
@@ -215,14 +217,16 @@ export class FabricaSimulacaoService {
         const primeiroSetorDoPipe = props.pipeProducao.getSetorInChain(props.planPivot.setor);
 
         const { adicionado: realocacao } = await primeiroSetorDoPipe.realocar(
-            props.fabrica,
             {
+                fabrica: props.fabrica,
+                estrutura: props.itemEstruct,
+                novoDia: this.calendario.proximoDiaUtilReplanejamento(props.planPivot.dia),
                 pedido: props.pedido,
-                novaData: this.calendario.proximoDiaUtilReplanejamento(props.planPivot.dia),
-                planejamentoFalho: props.planPivot,
-                planejamentoPedido: props.planOriginal,
+                planDoPedido: props.planOriginal,
+                planFalho: props.planPivot,
             }
         );
+
         return realocacao;
     }
 }

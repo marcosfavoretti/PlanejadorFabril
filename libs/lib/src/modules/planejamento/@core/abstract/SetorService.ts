@@ -1,19 +1,14 @@
 import { MetodoDeReAlocacao } from "@libs/lib/modules/replanejamento/@core/abstract/MetodoDeReAlocacao";
 import { MetodoDeAlocacao } from "../abstract/MetodoDeAlocacao";
-import { Pedido } from "../../../pedido/@core/entities/Pedido.entity";
-import { ISetorExcecao } from "../interfaces/ISetorExcecao";
 import { CODIGOSETOR } from "../enum/CodigoSetor.enum";
-import { ISyncProducao } from "../interfaces/ISyncProducao";
-import { ISyncProducaoFalha } from "../interfaces/ISyncProducaoFalha";
 import { ISetorChain } from "../interfaces/ISetorChain";
-import { IGerenciadorPlanejamentoMutation } from "../../../fabrica/@core/interfaces/IGerenciadorPlanejamento";
 import { PlanejamentoTemporario } from "../classes/PlanejamentoTemporario";
 import { ResultadoAlocacao } from "../classes/ResultadoAlocacao";
-import { Fabrica } from "@libs/lib/modules/fabrica/@core/entities/Fabrica.entity";
-import { RealocacaoProps } from "@libs/lib/modules/fabrica/@core/classes/RealocacaoProps";
 import { Logger } from "@nestjs/common";
 import { RealocacaoParcial } from "../classes/RealocacaoParcial";
 import { AlocacaoProps } from "@libs/lib/modules/fabrica/@core/classes/AlocacaoProps";
+import { PipeSemSetorException } from "@libs/lib/modules/fabrica/@core/exception/PipeSemOSetor.exception";
+import { RealocacaoProps } from "@libs/lib/modules/fabrica/@core/classes/RealocaacoProps";
 
 
 
@@ -23,7 +18,6 @@ import { AlocacaoProps } from "@libs/lib/modules/fabrica/@core/classes/AlocacaoP
 export abstract class SetorService implements ISetorChain {
 
     private nextSetor?: SetorService;
-    private divida: number | undefined;
     private logger = new Logger();
 
     constructor(
@@ -38,36 +32,31 @@ export abstract class SetorService implements ISetorChain {
      * @description percorre o chain de setores realocando os planejamentos falhos de cada setor. Sempre olhando o setor da frente para nao alocar mais cargo do que o possível
      */
     async realocar(
-        fabrica: Fabrica,
         props: RealocacaoProps,
         realocacaoAcumulada: RealocacaoParcial = new RealocacaoParcial(),
-        realocacaoUltimoSetor?: RealocacaoParcial,
     ): Promise<RealocacaoParcial> {
         this.logger.log(`COMEÇO DA REALOCAÇAO ${this.setor}`);
 
         const doSetorAtual = await this.metodoRealocacao.hookRealocacao(
-            fabrica,
-            this.setor,
-            props,
-            this.metodoAlocacao.verificacaoCapacidade(props.pedido, this.setor), //mal cheiro pq vejo o metodo de alocacao para fazer a realocacao
-            realocacaoUltimoSetor
+            {
+                fabrica: props.fabrica,
+                setor: this.setor,
+                estrutura: props.estrutura,
+                novoDia: props.novoDia,
+                pedido: props.pedido,
+                planDoPedido: props.planDoPedido,
+                planFalho: props.planFalho,
+                realocacaoUltSetor: props.realocacaoUltSetor
+            }
         );
-
-        console.log('ADICIONADO', doSetorAtual.adicionado)
 
         realocacaoAcumulada.adicionado.push(...doSetorAtual.adicionado)
         realocacaoAcumulada.retirado.push(...doSetorAtual.retirado);
 
         // se houver próximo, empurra o estado adiante e pega o que ele acrescentar
         if (this.nextSetor) {
-            // você pode ajustar props aqui se precisar propagar alguma mudança causada no setor atual
-            await this.nextSetor.realocar(
-                fabrica, {
-                ...props,
-            },
-                realocacaoAcumulada,
-                doSetorAtual
-            );
+            props.realocacaoUltSetor = doSetorAtual;
+            await this.nextSetor.realocar(props, realocacaoAcumulada);
         }
         return realocacaoAcumulada;
     }
@@ -125,7 +114,7 @@ export abstract class SetorService implements ISetorChain {
             return this;
         }
         if (!this.nextSetor) {
-            throw new Error('O setor não esta na corrente');
+            throw new PipeSemSetorException(setor);
         }
         const targetSetor = this.nextSetor.getSetorInChain(setor);
         return targetSetor;
@@ -172,7 +161,7 @@ export abstract class SetorService implements ISetorChain {
         return setor;
     }
 
-    getNextSetor():SetorService|undefined{
+    getNextSetor(): SetorService | undefined {
         return this.nextSetor;
     }
 

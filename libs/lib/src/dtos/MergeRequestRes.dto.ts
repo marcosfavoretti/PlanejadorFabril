@@ -1,5 +1,4 @@
 import { IsDate, IsNumber, IsString } from "class-validator";
-import { User } from "../modules/user/@core/entities/User.entity";
 import { Type } from "class-transformer";
 import { MergeRequest } from "../modules/fabrica/@core/entities/MergeRequest.entity";
 import { ApiProperty } from "@nestjs/swagger";
@@ -29,7 +28,11 @@ export class MergeRequestPendingDto {
             fabricaId: merge.fabrica.fabricaId,
             criadaEm: merge.criadaEm,
             mergeRequestId: merge.mergeRequestId,
-            user: { ...merge.feitoPor }
+            user: {
+                email: merge.feitoPor.email,
+                name: merge.feitoPor.name,
+                id: merge.feitoPor.id
+            }
         }
     }
 }

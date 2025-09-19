@@ -8,16 +8,12 @@ import { IGerenciadorPlanejamentConsulta } from "../@core/interfaces/IGerenciado
 import { PlanejamentoOverWriteByPedidoService } from "../@core/services/PlanejamentoOverWriteByPedido.service";
 import { Fabrica } from "../@core/entities/Fabrica.entity";
 import { PlanejamentoSnapShot } from "../@core/entities/PlanejamentoSnapShot.entity";
-import { CalculaDividaDaAtualizacao } from "../@core/services/CalculaDividaDaAtualizacao";
 import { GerenciaDividaService } from "../infra/service/GerenciaDivida.service";
-import { VerificaCapabilidade } from "../@core/classes/VerificaCapabilidade";
 import { FabricaSimulacaoService } from "../infra/service/FabricaSimulacao.service";
 import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/classes/PlanejamentoTemporario";
 import { IGerenciadorPlanejamentoMutation } from "../@core/interfaces/IGerenciadorPlanejamento";
-import { addISOWeekYears, isSameDay } from "date-fns";
-import { CalculaDividaDoPlanejamento } from "../@core/services/CalculaDividaDoPlanejamento";
-import { PlanejamentoTempOverWriteByPedidoService } from "../@core/services/PlanejamentoTempOverWriteByPedido";
-
+import { isSameDay } from "date-fns";
+import { Pedido } from "../../pedido/@core/entities/Pedido.entity";
 export class AtualizarPlanejamentoUseCase {
 
     constructor(
@@ -31,97 +27,86 @@ export class AtualizarPlanejamentoUseCase {
 
     async atualizar(dto: AtualizarPlanejamentoDTO): Promise<void> {
         try {
-            const { dia: diaAtualizado, qtd: qtdAtualizado } = dto;
+            const [fabrica, planejamento] = await Promise.all([
+                this.fabricaService.consultaFabrica(dto.fabricaId),
+                this.planejamentoService.consultaPlanejamento(dto.planejamendoId)
+            ]);
 
-            const fabrica = await this.fabricaService.consultaFabrica(dto.fabricaId);
-
-            const planejamento = await this.planejamentoService.consultaPlanejamento(dto.planejamendoId);
-
-            const planejamentoSnapShotAlvo = await this.consultaPlanejamentoService.consultaPlanejamentoEspecifico(fabrica, planejamento, new PlanejamentoOverWriteByPedidoService());
+            const planejamentoSnapShotAlvo = await this.consultaPlanejamentoService
+                .consultaPlanejamentoEspecifico(
+                    fabrica,
+                    planejamento,
+                    new PlanejamentoOverWriteByPedidoService()
+                );
 
             const planejamentoTemporario = PlanejamentoTemporario.createByEntity(planejamentoSnapShotAlvo);
 
-            /**
-             * se tiver mudanca de valor eu atualizo o valor da variavel
-             */
-            qtdAtualizado != undefined && (planejamentoTemporario.qtd = qtdAtualizado);
-
-            /**
-             * se tiver mudanca de dia eu vejo se consigo replanejar
-             */
-            if (!isSameDay(diaAtualizado, planejamento.dia)) {
-                console.log('necessario replan')
-                const _replanejamentoResultado = await this.fabricaSimulacaoService.replanejar(
-                    fabrica,
-                    [planejamentoTemporario],
-                    diaAtualizado
-                );
-                //se atualizar o dia o servico de planejamento ja vai salvar o planejamento
-                await this.gerenciadorPlanejado.appendPlanejamento(fabrica, planejamento.pedido, _replanejamentoResultado.planejamentos);
-
-                const snapShotParaRemover: number[] = await _replanejamentoResultado.retirado.map(retirado => retirado.planejamentoSnapShotId).filter(Boolean) as number[];
-
-                const snapshotsCompletos = await this.consultaPlanejamentoService.consultaPlanejamentoSnapShots(snapShotParaRemover)
-                
-                await this.gerenciadorPlanejado.removePlanejamento(fabrica, [...snapshotsCompletos]);
-
-                return;
+            
+            if (!isSameDay(dto.dia, planejamento.dia)) {
+                await this.replanejarDia(fabrica, planejamento.pedido, planejamentoTemporario, dto.dia);
+                planejamentoTemporario.dia = dto.dia;
             }
-
-            /**
-             * removo o planejamento redundante para nao sumariazar
-             */
-            await this.gerenciadorPlanejado.removePlanejamento(fabrica, [planejamentoSnapShotAlvo]);
-            //
-            //-=-=-=-=-=-=-=-=-=-=
-            /**
-             * consulto os planejamentos da fabrica para calcular dividas
-             */
-            const planejamentos = await this.consultaPlanejamentoService.consultaPlanejamentosSnapShots(fabrica);
-
-            const allPlanejamentos = planejamentos.map(plan =>
-                PlanejamentoTemporario.createByEntity(plan))
-                .concat(planejamentoTemporario);
-
-
-            await this.gerenciaDividaService.resolverDividasParaSalvar(
-                fabrica,
-                planejamentoSnapShotAlvo.planejamento.pedido,
-                new CalculaDividaDoPlanejamento({
-                    pedido: planejamentoSnapShotAlvo.planejamento.pedido,
-                    planejamentos: new PlanejamentoTempOverWriteByPedidoService()
-                        .resolverOverwrite(
-                            allPlanejamentos
-                        )
-                }),
-            );
-            //-=-=-=-=-=-=-=-=-=-=
-            /**
-             * salvo o novo planejamentos
-             */
-            await this.gerenciadorPlanejado.appendPlanejamento(fabrica, planejamento.pedido, [planejamentoTemporario]);
-            //
+            
+            if(dto.qtd !== undefined && !Number.isNaN(dto.qtd)) planejamentoTemporario.qtd = dto.qtd;
+            
+            await this.substituirPlanejamento(fabrica, planejamentoSnapShotAlvo, planejamentoTemporario);
+            await this.calcularEResolverDividas(fabrica, planejamento.pedido);
         }
         catch (error) {
             if (error instanceof EntityNotFoundError) throw new NotFoundException(error);
-            throw new InternalServerErrorException(
-                `Falha ao atulizar o planejamento ${error.message}`
-            );
+            throw new InternalServerErrorException(`Falha ao atualizar o planejamento: ${error.message}`);
         }
     }
 
-    private async alocacaoExcedeLimite(
+
+
+    private async replanejarDia(
         fabrica: Fabrica,
-        originalPlanejamentoSnapShot: PlanejamentoSnapShot,
-        planejamentoCandidato: PlanejamentoTemporario
-    ): Promise<boolean> {
-        const quantoPossoAlocar = await this.gerenciadorPlanejado.possoAlocarQuantoNoDia(
+        pedido: Pedido,
+        planejamento: PlanejamentoTemporario,
+        novoDia: Date
+    ) {
+        const resultadoReplanejamento = await this.fabricaSimulacaoService.replanejar(
             fabrica,
-            planejamentoCandidato.dia,
-            planejamentoCandidato.setor,
-            planejamentoCandidato.item,
-            new VerificaCapabilidade(planejamentoCandidato.item, planejamentoCandidato.setor)
+            [planejamento],
+            novoDia
         );
-        return (planejamentoCandidato.qtd - originalPlanejamentoSnapShot.planejamento.qtd) <= quantoPossoAlocar;
+
+        await this.gerenciadorPlanejado.appendPlanejamento(fabrica, pedido, resultadoReplanejamento.planejamentos);
+
+        const snapShotParaRemover: number[] = resultadoReplanejamento.retirado
+            .map(r => r.planejamentoSnapShotId)
+            .filter(Boolean) as number[];
+
+        const snapshotsCompletos = await this.consultaPlanejamentoService.consultaPlanejamentoSnapShots(snapShotParaRemover);
+        await this.gerenciadorPlanejado.removePlanejamento(fabrica, snapshotsCompletos);
+    }
+
+    private async substituirPlanejamento(
+        fabrica: Fabrica,
+        snapshotAlvo: PlanejamentoSnapShot,
+        planejamentoTemporario: PlanejamentoTemporario
+    ) {
+        await this.gerenciadorPlanejado.removePlanejamento(fabrica, [snapshotAlvo]);
+        await this.gerenciadorPlanejado.appendPlanejamento(fabrica, planejamentoTemporario.pedido, [planejamentoTemporario]);
+    }
+
+    private async calcularEResolverDividas(
+        fabrica: Fabrica,
+        pedido: Pedido,
+    ) {
+        const planejamentos = await this.consultaPlanejamentoService.consultaPlanejamentoAtual(fabrica, new PlanejamentoOverWriteByPedidoService());
+
+        const allPlanejamentosAsTemporario = planejamentos.map(p =>
+            PlanejamentoTemporario.createByEntity(p));
+
+
+        const dividas = await this.gerenciaDividaService.resolverDividas({
+            fabrica,
+            pedido,
+            planejamentos: allPlanejamentosAsTemporario
+        });
+
+        await this.gerenciaDividaService.adicionaDividas(fabrica, dividas);
     }
 }

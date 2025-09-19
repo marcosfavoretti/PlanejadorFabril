@@ -2,12 +2,11 @@ import { AlocacaoComDependenciaProps, AlocacaoSemDependenciaProps, MetodoDeAloca
 import { Fabrica } from "@libs/lib/modules/fabrica/@core/entities/Fabrica.entity";
 import { Pedido } from "@libs/lib/modules/pedido/@core/entities/Pedido.entity";
 import { CODIGOSETOR } from "../enum/CodigoSetor.enum";
-import { ISelecionarItem } from "@libs/lib/modules/fabrica/@core/interfaces/ISelecionarItem";
+import { ISelecionarItem } from "@libs/lib/modules/item/@core/interfaces/ISelecionarItem";
 import { IGerenciadorPlanejamentConsulta } from "@libs/lib/modules/fabrica/@core/interfaces/IGerenciadorPlanejamentoConsulta";
 import { PlanejamentoTemporario } from "../classes/PlanejamentoTemporario";
 import { IVerificaCapacidade } from "@libs/lib/modules/fabrica/@core/interfaces/IVerificaCapacidade";
 import { VerificaCapabilidade } from "@libs/lib/modules/fabrica/@core/classes/VerificaCapabilidade";
-import { subDays } from "date-fns";
 
 export class AlocaItensDependencias extends MetodoDeAlocacao {
 

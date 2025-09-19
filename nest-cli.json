@@ -21,6 +21,15 @@
   "monorepo": true,
   "root": "apps/planejamento-ethos",
   "projects": {
+    "importa-calendario-logix": {
+      "type": "application",
+      "root": "apps/importa-calendario-logix",
+      "entryFile": "main",
+      "sourceRoot": "apps/importa-calendario-logix/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/importa-calendario-logix/tsconfig.app.json"
+      }
+    },
     "importa-pedido": {
       "type": "application",
       "root": "apps/importa-pedido",
@@ -37,6 +46,15 @@
       "sourceRoot": "libs/lib/src",
       "compilerOptions": {
         "tsConfigPath": "libs/lib/tsconfig.lib.json"
+      }
+    },
+    "planeja-worker": {
+      "type": "application",
+      "root": "apps/planeja-worker",
+      "entryFile": "main",
+      "sourceRoot": "apps/planeja-worker/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/planeja-worker/tsconfig.app.json"
       }
     },
     "planejamento-ethos": {

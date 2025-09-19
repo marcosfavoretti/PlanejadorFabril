@@ -16,6 +16,7 @@ export class RequestFabricaForkUseCase {
     async fork(dto: FabricaForkDTO, novaPrincipal: boolean = false): Promise<Fabrica> {
         try {
             const user = await this.userService.getUser(dto.userId);
+            console.log(user)
             const fabricaAlvo = await this.fabricaService.consultaFabricaPrincipal();
             if (!fabricaAlvo) throw new Error('nao foi possivel encontrar nenhuma fabrica principal');
             const fabricafork = await this.forkFabricaService.fork({
@@ -25,6 +26,7 @@ export class RequestFabricaForkUseCase {
             });
             return await this.fabricaService.saveFabrica(fabricafork);
         } catch (error) {
+            console.error(error);
             throw new InternalServerErrorException(error);
         }
     }

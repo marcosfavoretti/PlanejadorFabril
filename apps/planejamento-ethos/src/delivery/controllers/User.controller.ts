@@ -7,6 +7,7 @@ import {  Response } from "express";
 import { User } from "@libs/lib/modules/user/@core/entities/User.entity";
 import { JwtGuard } from "@libs/lib/modules/user/@core/guard/jwt.guard";
 import { CustomRequest } from "@libs/lib/modules/shared/@core/classes/CustomRequest";
+import { UserResponseDTO } from "@dto/UserResponse.dto";
 
 @ApiTags('User')
 @Controller('user')
@@ -19,7 +20,7 @@ export class UserController {
         type: () => User,
     })
     public async createUserMethod(@Body() payload: CreateUserDto) {
-        return this.useCase.createUsuer(payload);
+        return this.useCase.createUser(payload);
     }
 
     @Post('/ping')
@@ -74,7 +75,7 @@ export class UserController {
     @UseGuards(JwtGuard)
     @ApiResponse({
         status: 200,
-        type: User
+        type: () => UserResponseDTO
     })
     @ApiResponse({
         status: 401,
