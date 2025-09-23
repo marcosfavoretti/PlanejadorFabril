@@ -1,5 +1,5 @@
 import { Body, Controller, Put, Get, HttpCode, HttpStatus, Inject, Post, Query, Req, UseGuards, Delete } from "@nestjs/common";
-import { ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Fabrica } from "@libs/lib/modules/fabrica/@core/entities/Fabrica.entity";
 import { ConsutlarFabricaPrincipalAtualUseCase } from "@libs/lib/modules/fabrica/application/ConsultarFabricaPrincipalAtual.usecase";
 import { FabricaResponseDto } from "@dto/FabricaResponse.dto";
@@ -38,6 +38,8 @@ import { MergeRequestPendingDto } from "@dto/MergeRequestRes.dto";
 import { RolesGuard } from "@libs/lib/modules/cargos/@core/guards/VerificaCargo.guard";
 import { Roles } from "@libs/lib/modules/cargos/@core/decorator/Cargo.decorator";
 import { CargoEnum } from "@libs/lib/modules/cargos/@core/enum/CARGOS.enum";
+import { SincronizarFabricaPrivadaUseCase } from "@libs/lib/modules/fabrica/application/SincronizarFabricaPrivada.usecase";
+import { SincronizarFabricaPrivadaDTO } from "@dto/SincronizarFabricaPrivada.dto";
 
 @UseGuards(
     JwtGuard
@@ -252,5 +254,19 @@ export class FabricaController {
         @Req() req: CustomRequest,
     ): Promise<void> {
         return await this.deletarFabricaUseCase.deleta(payload, req.user);
+    }
+
+    @Inject(SincronizarFabricaPrivadaUseCase) private sincronizarFabricaPrivadaUseCase: SincronizarFabricaPrivadaUseCase;
+    @UseGuards(NaPrincipalNao)
+    @ApiResponse({
+        type: () => SincronizarFabricaPrivadaDTO
+    })
+    @ApiOperation({summary: 'sicronizar com o nó principal atual',description: 'operação que força uma fabrica a mudar o pai dela para o nó principal mais recente'})
+    @Post('/sincronizar')
+    async sincronizarFabricaPrivadaMethod(
+        @Body() payload: SincronizarFabricaPrivadaDTO,
+        @Req() req: CustomRequest,
+    ): Promise<SincronizarFabricaPrivadaDTO> {
+        return await this.sincronizarFabricaPrivadaUseCase.sincroniza(payload);
     }
 }

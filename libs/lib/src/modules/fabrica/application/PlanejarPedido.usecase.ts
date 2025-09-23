@@ -71,7 +71,9 @@ export class PlanejarPedidoUseCase {
                 const planejamentos = await this.gerenciadorPlanejamentoMutation.appendPlanejamento(fabricaVersionada, pedido, planejamentosTemporarios);
                 //
                 //roda eventos de pos planejamentos
-                const promises = this.onNovoPlanejamento.map(on => on.execute(fabricaVersionada!, planejamentos));
+                const promises = this.onNovoPlanejamento.map(on =>
+                    on.execute(fabricaVersionada!, planejamentos)
+                );
                 await Promise.all(promises);
                 //
                 pedido.processaPedido();

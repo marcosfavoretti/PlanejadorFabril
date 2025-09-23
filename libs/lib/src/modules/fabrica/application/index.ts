@@ -1,3 +1,4 @@
+export { SincronizarFabricaPrivadaUseCase } from "./SincronizarFabricaPrivada.usecase";
 export { PlanejarPedidoUseCase } from "./PlanejarPedido.usecase";
 export { HandleDateVirtualUseCase } from "./HandleDataVirtual.usecase";
 export { ConsultarDateVirtualUseCase } from "./ConsultarDataVirutal.usecase";
@@ -20,3 +21,5 @@ export { ResetaFabricaUseCase } from "./ResetaFabrica.usecase";
 export { DeletarFabricaUseCase } from "./DeletarFabrica.usecase";
 export { RemoverPlanejamentoUseCase } from "./RemoverPlanejamento.usecase";
 export { DesplanejarPedidoUseCase } from "./DesplanejarPedido.usecase"
+export { ConsultaMergeRequestUseCase } from "./ConsultaMergeRequest.usecase";
+export { RequestFabricaMergeUseCase } from "./RequestFabricaMerge.usecase";

@@ -81,8 +81,12 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
         //     props.setor,
         // );
 
+        // const planejamentosImpactadoDoSetorASC = this.planejamentosDoSetor(props.planDoPedido, props.planFalho.dia, props.setor);
+
         const planejamentosImpactadoDoSetorASC = [props.planFalho];
 
+        console.log('planejamntos impact', planejamentosImpactadoDoSetorASC.reduce((t,a)=> t+=a.qtd,0));
+        
         /**
          * calculo do offset para manter a proporção dos dias
          */

@@ -4,7 +4,6 @@ import { FabricaService } from "../infra/service/Fabrica.service";
 import { IUserService } from "@libs/lib/modules/user/@core/abstract/IUserService";
 import { ResetaFabricaDTO } from "@dto/ResetaFabrica.dto";
 import { DeletaSnapShotService } from "../infra/service/DeletaSnapShot.service";
-import { ConsultaPlanejamentoService } from "../infra/service/ConsultaPlanejamentos.service";
 
 export class ResetaFabricaUseCase {
     constructor(

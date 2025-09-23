@@ -21,13 +21,14 @@ import {
     RequestFabricaForkUseCase,
     PlanejarPedidoUseCase,
     MergeFabricaUseCase,
+    RequestFabricaMergeUseCase,
+    ConsultaMergeRequestUseCase,
     AdicionarPlanejamentoManualUseCase,
     ResetaFabricaUseCase,
     RemoverPlanejamentoUseCase,
-    DeletarFabricaUseCase
+    DeletarFabricaUseCase,
+    SincronizarFabricaPrivadaUseCase
 } from "./application";
-import { RequestFabricaMergeUseCase } from "./application/RequestFabricaMerge.usecase";
-import { ConsultaMergeRequestUseCase } from "./application/ConsultaMergeRequest.usecase";
 
 
 @Module({
@@ -52,6 +53,7 @@ import { ConsultaMergeRequestUseCase } from "./application/ConsultaMergeRequest.
         CriarNovaFabricaPrincipalUseCase,
         PlanejarPedidoUseCase,
         ConsutlarFabricaPrincipalAtualUseCase,
+        SincronizarFabricaPrivadaUseCase,
         RequestFabricaForkUseCase,
         ConsutlarFabricasDoUsuarioUseCase,
         ConsultarPlanejamentosUseCase,
@@ -82,6 +84,7 @@ import { ConsultaMergeRequestUseCase } from "./application/ConsultaMergeRequest.
         ConsultarDatasPlanejadasUseCase,
         HandleStartUpBuildFabricaUseCase,
         ConsultarDateVirtualUseCase,
+        SincronizarFabricaPrivadaUseCase,
         HandleDateVirtualUseCase,
         PlanejarPedidoUseCase,
     ],
