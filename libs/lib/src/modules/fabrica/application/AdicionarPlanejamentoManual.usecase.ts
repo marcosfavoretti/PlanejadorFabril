@@ -31,7 +31,6 @@ export class AdicionarPlanejamentoManualUseCase {
                 this.itemService.consultarItem(dto.item),
             ]);
 
-            const planejamentosAtuais = await this.consultaPlanejamentoService.consultaPlanejamentoAtual(fabrica, new PlanejamentoOverWriteByPedidoService());
 
             if (fabrica.principal) throw new BadRequestException('Fabricas principais nao podem ser pogramadas diretamente');
 
@@ -52,7 +51,8 @@ export class AdicionarPlanejamentoManualUseCase {
 
             /**
              * validacao se pode tirar dividas
-             */
+            */
+            const planejamentosAtuais = await this.consultaPlanejamentoService.consultaPlanejamentoDoPedidoAteFabrica(fabrica, planejamentoTemporario.pedido);
             const dividas = await this.gereciaDivida.resolverDividas(
                 {
                     fabrica,

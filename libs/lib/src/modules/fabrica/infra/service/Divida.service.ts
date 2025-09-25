@@ -69,8 +69,8 @@ export class DividaService {
                     },
                 },
             },
-
         });
+        
         const dividasResolvidas = new DividaOverWriteByPedido().resolverOverwrite(dividas);
         dividasResolvidas.forEach(divida => {
             if (dividaPorSetor.has(divida.divida.setor.codigo)) {

@@ -5,7 +5,6 @@ import { RealocacaoParcial } from "@libs/lib/modules/planejamento/@core/classes/
 import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
 import { RealocacaoProps } from "@libs/lib/modules/fabrica/@core/classes/RealocaacoProps";
 import { ISelecionarItem } from "@libs/lib/modules/item/@core/interfaces/ISelecionarItem";
-import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/classes/PlanejamentoTemporario";
 
 
 export type HookRealocacaoProps = RealocacaoProps & {

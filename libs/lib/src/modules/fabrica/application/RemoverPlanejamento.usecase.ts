@@ -44,7 +44,7 @@ export class RemoverPlanejamentoUseCase {
             // }) 
 
             const planejamentosDaFabrica = await this.consultaPlanejamentoService
-                .consultaPlanejamentoAtual(fabrica, new PlanejamentoOverWriteByPedidoService);
+                .consultaPlanejamentoDoPedidoAteFabrica(fabrica, planejamento.pedido);
             /**
              * resolucao de dividas da remocao
              */

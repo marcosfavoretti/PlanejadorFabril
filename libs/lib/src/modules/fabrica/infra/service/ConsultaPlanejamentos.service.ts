@@ -22,6 +22,22 @@ export class ConsultaPlanejamentoService {
 
     private calendario = new Calendario();
 
+    async consultaPlanejamentoDoPedidoAteFabrica(fabrica: Fabrica, pedido: Pedido): Promise<PlanejamentoSnapShot[]> {
+        const planejamentos = await this.planejamentoSnapShotRepository.find({
+            where: [
+                {
+                    planejamento: { pedido: pedido },
+                    fabrica: { fabricaId: fabrica.fabricaId }
+                },
+                {
+                    planejamento: { pedido: pedido },
+                    fabrica: { principal: true }
+                }
+            ]
+        });
+        return await new PlanejamentoOverWriteByPedidoService().resolverOverwrite(planejamentos);
+    }
+
 
     async consultaPlanejamentoDaFabricaPrincipal(): Promise<PlanejamentoSnapShot[]> {
         const fabricaPrincipal = await this.fabricaService.consultaFabricaPrincipal();

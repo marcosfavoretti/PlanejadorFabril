@@ -10,7 +10,6 @@ import { FabricaService } from "./Fabrica.service";
 export class EfetivaPlanejamentoService {
 
   constructor(
-    private readonly fabricaService: FabricaService,
     private readonly planejamentoSnapShotRepository: PlanejamentoSnapShotRepository,
   ) { }
 
@@ -18,7 +17,7 @@ export class EfetivaPlanejamentoService {
    * @param fabrica 
    * @param planejamentosTemporarios 
    * @returns 
-   * @description funcao especializadas em salvar os snapshots no banco de dados
+   * @description funcao especializadas em salvar os snapshots no banco de dados. Se for do mesmo dia e mesmo setor eu garanto que ele sera concatenado. Isso so se aplica aos planejamentos passados
    */
   async efetiva(
     fabrica: Fabrica,
@@ -26,10 +25,23 @@ export class EfetivaPlanejamentoService {
   ): Promise<PlanejamentoSnapShot[]> {
     try {
       // resolve todos os snapshots em paralelo
+      const summarizePlans = new Map<string, PlanejamentoTemporario>();
+
+      for (const planTemp of planejamentosTemporarios) {
+        const key = `${planTemp.setor}-${planTemp.item.getCodigo()}-${planTemp.dia.toISOString()}-${planTemp.pedido.id}`;
+        const planInMap = summarizePlans.get(key);
+        if (planInMap) {
+          planInMap.qtd += planTemp.qtd;
+        } else {
+          summarizePlans.set(key, { ...planTemp });
+        }
+      }
+
       const novosSnapshots =
-        planejamentosTemporarios.map((planejamentoTemp) =>
+        Array.from(summarizePlans.values()).map((planejamentoTemp) =>
           this.criarSnapshot(fabrica, planejamentoTemp),
         );
+
 
       console.log('quero ver', planejamentosTemporarios)
 

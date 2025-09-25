@@ -32,23 +32,21 @@ export class AtualizarPlanejamentoUseCase {
                 this.planejamentoService.consultaPlanejamento(dto.planejamendoId)
             ]);
 
-            const planejamentoSnapShotAlvo = await this.consultaPlanejamentoService
-                .consultaPlanejamentoEspecifico(
-                    fabrica,
-                    planejamento,
-                    new PlanejamentoOverWriteByPedidoService()
-                );
+            const planejamentoSnapShotAlvo = await this.consultaPlanejamentoService.consultaPlanejamentoEspecifico(
+                fabrica,
+                planejamento,
+                new PlanejamentoOverWriteByPedidoService()
+            );
 
             const planejamentoTemporario = PlanejamentoTemporario.createByEntity(planejamentoSnapShotAlvo);
 
-            
+            if (dto.qtd !== undefined && !Number.isNaN(dto.qtd)) planejamentoTemporario.qtd = dto.qtd;
+
             if (!isSameDay(dto.dia, planejamento.dia)) {
                 await this.replanejarDia(fabrica, planejamento.pedido, planejamentoTemporario, dto.dia);
                 planejamentoTemporario.dia = dto.dia;
             }
-            
-            if(dto.qtd !== undefined && !Number.isNaN(dto.qtd)) planejamentoTemporario.qtd = dto.qtd;
-            
+
             await this.substituirPlanejamento(fabrica, planejamentoSnapShotAlvo, planejamentoTemporario);
             await this.calcularEResolverDividas(fabrica, planejamento.pedido);
         }
@@ -76,8 +74,9 @@ export class AtualizarPlanejamentoUseCase {
 
         const snapShotParaRemover: number[] = resultadoReplanejamento.retirado
             .map(r => r.planejamentoSnapShotId)
-            .filter(Boolean) as number[];
+            .filter(Boolean) as number[];//filtro apenas os que ja tem referencia no banco de dados
 
+        //TODO essa funcao abaixo pode ser removida se passado os snapshots por parametro para essa funcao;
         const snapshotsCompletos = await this.consultaPlanejamentoService.consultaPlanejamentoSnapShots(snapShotParaRemover);
         await this.gerenciadorPlanejado.removePlanejamento(fabrica, snapshotsCompletos);
     }
@@ -95,11 +94,13 @@ export class AtualizarPlanejamentoUseCase {
         fabrica: Fabrica,
         pedido: Pedido,
     ) {
-        const planejamentos = await this.consultaPlanejamentoService.consultaPlanejamentoAtual(fabrica, new PlanejamentoOverWriteByPedidoService());
+        // const planejamentos = await this.consultaPlanejamentoService.consultaPlanejamentoAtual(fabrica, new PlanejamentoOverWriteByPedidoService());
+        const planejamentos = await this.consultaPlanejamentoService.consultaPlanejamentoDoPedidoAteFabrica(fabrica, pedido);
+        
+        console.log(planejamentos);
 
         const allPlanejamentosAsTemporario = planejamentos.map(p =>
             PlanejamentoTemporario.createByEntity(p));
-
 
         const dividas = await this.gerenciaDividaService.resolverDividas({
             fabrica,

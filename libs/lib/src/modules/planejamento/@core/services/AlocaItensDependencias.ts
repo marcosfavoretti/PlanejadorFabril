@@ -7,12 +7,13 @@ import { IGerenciadorPlanejamentConsulta } from "@libs/lib/modules/fabrica/@core
 import { PlanejamentoTemporario } from "../classes/PlanejamentoTemporario";
 import { IVerificaCapacidade } from "@libs/lib/modules/fabrica/@core/interfaces/IVerificaCapacidade";
 import { VerificaCapabilidade } from "@libs/lib/modules/fabrica/@core/classes/VerificaCapabilidade";
+import { SelecionaItemDep } from "@libs/lib/modules/fabrica/@core/classes/SelecionaItemDep";
 
 export class AlocaItensDependencias extends MetodoDeAlocacao {
 
     constructor(
         gerenciador: IGerenciadorPlanejamentConsulta,
-        selecionador: ISelecionarItem
+        readonly selecionador: ISelecionarItem = new SelecionaItemDep()
     ) {
         super(gerenciador, selecionador);
     }

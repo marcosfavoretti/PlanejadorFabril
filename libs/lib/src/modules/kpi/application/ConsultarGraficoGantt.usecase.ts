@@ -52,15 +52,15 @@ export class ConsultarGraficoGanttUseCase {
             );
             //seta a cor dos pedidos
             sortedItens.forEach((i) => {
-                // const pedidoId = i.planejamento.pedido.id;
-                const pedidoId = i.planejamento.pedido.codigo;
+                const pedidoId = String(i.planejamento.pedido.id);
+                // const pedidoId = i.planejamento.pedido.codigo;
                 if (!this.colorMapPedido.has(pedidoId)) {
                     this.colorMapPedido.set(pedidoId, this.colorGenerator.next());
                 }
             });
             //gera as tasks para o gantt do frontend
             const data: GanttData[] = sortedItens.map((i) => {
-                const pedidoChave = i.planejamento.pedido.codigo;
+                const pedidoChave = String(i.planejamento.pedido.id);
                 const cor = dto.colorir === OqColorirGantt.OPERACAO ? this.colorMapSetor.get(i.planejamento.setor.codigo) : this.colorMapPedido.get(pedidoChave)
                 const customClass = i.ehAtrasado() ? "gantt-atrasado" : undefined;
                 return {

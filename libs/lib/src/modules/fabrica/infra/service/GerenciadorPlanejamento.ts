@@ -39,7 +39,6 @@ export class GerenciadorPlanejamento implements
         return resultados.flatMap(plan => plan.planejamento);
     }
 
-
     async removePlanejamento(
         fabrica: Fabrica,
         planejamento: PlanejamentoSnapShot[]
@@ -149,6 +148,7 @@ export class GerenciadorPlanejamento implements
         return encontrouDatas;
     }
 
+    //TODO melhorar funcao abaixo muito lerda
     /**
      * @param dataPonteiro 
      * @param setor 
@@ -167,7 +167,7 @@ export class GerenciadorPlanejamento implements
     ): Promise<Date[]> {
         const maxTentativas = 2_000;
         let quantoPreciso = qtd;
-        console.log(`preciso alocarr ${qtd}`)
+        console.log(`preciso alocar ${qtd}`)
         const encontrouDatas: Date[] = [];
         const diasUsados = new Set<number>();
         let ponteiro = dataPonteiro;

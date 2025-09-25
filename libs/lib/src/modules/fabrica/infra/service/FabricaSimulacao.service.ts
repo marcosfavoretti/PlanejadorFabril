@@ -5,7 +5,7 @@ import { Fabrica } from "@libs/lib/modules/fabrica/@core/entities/Fabrica.entity
 import { FabricaPlanejamentoResultado } from "../../@core/classes/FabricaPlanejamentoResultado";
 import { ErroDeValidacao } from "../../@core/exception/ErroDeValidacao.exception";
 import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/classes/PlanejamentoTemporario";
-import { isAfter, isBefore, isSameDay, startOfTomorrow } from "date-fns";
+import { isBefore, startOfTomorrow } from "date-fns";
 import { ConsultaPlanejamentoService } from "./ConsultaPlanejamentos.service";
 import { PlanejamentoOverWriteByPedidoService } from "../../@core/services/PlanejamentoOverWriteByPedido.service";
 import { Calendario } from "@libs/lib/modules/shared/@core/classes/Calendario";
@@ -14,11 +14,14 @@ import { IConsultarRoteiroPrincipal } from "../../../item/@core/interfaces/ICons
 import { SetorService } from "@libs/lib/modules/planejamento/@core/abstract/SetorService";
 import { IConsultaRoteiro } from "../../../item/@core/interfaces/IConsultaRoteiro";
 import { AlocaItensDependencias } from "@libs/lib/modules/planejamento/@core/services/AlocaItensDependencias";
-import { SelecionaItemDep } from "../../@core/classes/SelecionaItemDep";
 import { IGerenciadorPlanejamentConsulta } from "../../@core/interfaces/IGerenciadorPlanejamentoConsulta";
 import { IMontaEstrutura } from "../../../item/@core/interfaces/IMontaEstrutura.ts";
 import { FabricaReplanejamentoResultado } from "../../@core/classes/FabricaReplanejamentoResultado";
 import { ItemEstruturado } from "../../../item/@core/classes/ItemEstruturado";
+import { RealocaPedidoTodoService } from "@libs/lib/modules/replanejamento/@core/service/RealocaPedidoTodo.service";
+import { SelecionaItemRops } from "../../@core/classes/SelecionaItemRops";
+import { RealocaDependenciaService } from "@libs/lib/modules/replanejamento/@core/service/RealocaDependencia.service";
+import { SelecionaItemDep } from "../../@core/classes/SelecionaItemDep";
 
 export class FabricaSimulacaoService {
 
@@ -40,10 +43,10 @@ export class FabricaSimulacaoService {
 
         try {
             const estrutura = await this.montaEstruturaEstrategia.monteEstrutura(pedido.item);
-            this.logger.log(estrutura);
 
             // 1. Planejamento principal (já retorna o pipe também)
             const { planInicial, pipePrincipal } = await this.alocaItemPrincipal(fabrica, pedido, estrutura);
+
             planejamentosTemporarios.push(...planInicial);
 
             // 2. Ajusta range se necessário
@@ -113,16 +116,14 @@ export class FabricaSimulacaoService {
         for (const item of [...estrutura.itensDependencia]) {
             estrutura.ordenaDependencias(item);
 
-            const setoresDoItem = await this.consultaRoteiro
-                .roteiro(item);
+            const setoresDoItem = await this.consultaRoteiro.roteiro(item);
 
-            const pipe = this.setorChainFactoryService
-                .modificarCorrente(setoresDoItem);
+            const pipe = this.setorChainFactoryService.modificarCorrente(setoresDoItem);
 
             this.setorChainFactoryService.setMetodoDeAlocacaoCustomTodos(
                 pipe,
                 setoresDoItem,
-                new AlocaItensDependencias(this.gerenciadorPlanejamento, new SelecionaItemDep())
+                new AlocaItensDependencias(this.gerenciadorPlanejamento)
             );
 
             const { acumulado } = await pipe.alocar({
@@ -135,6 +136,55 @@ export class FabricaSimulacaoService {
             acumulados.push(...acumulado);
         }
         return acumulados;
+    }
+
+    async replanejarDependencia(
+        props: {
+            fabrica: Fabrica,
+            estrutura: ItemEstruturado,
+            planejamentoPedido: PlanejamentoTemporario[],
+            planejamentoFalho: PlanejamentoTemporario,
+            novaData?: Date
+        }):
+        Promise<FabricaReplanejamentoResultado> {
+
+        Logger.debug('Foi por dependecia');
+
+        const resultado = new FabricaReplanejamentoResultado();
+
+        //filtra dos planejamentos apenas os planejamentos que incluem o item que esta sendo alvo da açao
+        const planejamentosDependentes = props.planejamentoPedido.
+            filter(plan => plan.item === props.planejamentoFalho.item);
+
+        const [roteiro, roteiroItemFinal] = await Promise.all([
+            this.consultaRoteiro.roteiro(props.planejamentoFalho.item),
+            this.consultaRoteiro.roteiro(props.estrutura.itemFinal)
+        ])
+
+        const roteiroCompleto = roteiro//.concat(roteiroItemFinal); TODO adicionar o item final aqui para caso as dependencias tambem nao tiverem sido feitas ate a data ele replanejar o produto 000
+
+        const pipeProducao = this.setorChainFactoryService.modificarCorrente(roteiroCompleto);
+
+        props.estrutura.ordenaDependencias(props.planejamentoFalho.item);
+
+        this.setorChainFactoryService.setMetodoDeRealocacaoCustomTodos(
+            pipeProducao,
+            roteiroCompleto,
+            new RealocaDependenciaService(this.gerenciadorPlanejamento, new SelecionaItemDep())
+        );
+
+        const resultadoAlocacao = await pipeProducao.realocar(
+            {
+                estrutura: props.estrutura,
+                fabrica: props.fabrica,
+                novoDia: props.novaData || startOfTomorrow(),
+                pedido: props.planejamentoFalho.pedido,
+                planDoPedido: planejamentosDependentes,
+                planFalho: props.planejamentoFalho,
+            }
+        );
+        [resultado.planejamentos, resultado.retirado] = [resultadoAlocacao.adicionado, resultadoAlocacao.retirado];
+        return resultado;
     }
 
     async replanejar(fabrica: Fabrica, planejamentosFalhos: PlanejamentoTemporario[], novaData?: Date):
@@ -153,6 +203,20 @@ export class FabricaSimulacaoService {
 
                 const estrutura = await this.montaEstruturaEstrategia.monteEstrutura(realocacao.pedido.item);
 
+                console.log('estruct', estrutura);
+
+                if (estrutura.itensDependencia.map(i=>i.Item).includes(realocacao.item.Item)) {
+                    //sempre que for realocar uma dependencia eu entro aqui
+                    const response = await this.replanejarDependencia({
+                        fabrica,
+                        estrutura,
+                        planejamentoFalho: realocacao,
+                        planejamentoPedido: planejamentosDoPedidoEmBanco.map(PlanejamentoTemporario.createByEntity),
+                        novaData
+                    });
+                    return response;
+                }
+
                 const roteiro = await this.consultaRoteiroPrincipal.roteiro(estrutura);
 
                 const pipeSetoresCustom = this.setorChainFactoryService
@@ -161,6 +225,9 @@ export class FabricaSimulacaoService {
                 const setorAlvo = pipeSetoresCustom
                     .getSetorInChain(realocacao.setor);
 
+                const planDoPedidoPrincipal = planejamentosAlvos.filter(
+                    plan => [estrutura.itemFinal.getCodigo(), estrutura.itemRops.getCodigo()].includes(plan.planejamento.item.getCodigo()));
+
                 const { adicionado, retirado } = await setorAlvo.realocar(
                     {
                         estrutura: estrutura,
@@ -168,7 +235,7 @@ export class FabricaSimulacaoService {
                         novoDia: novaData ? novaData : this.calendario.proximoDiaUtilReplanejamento(new Date()),
                         pedido: realocacao.pedido,
                         planFalho: realocacao,
-                        planDoPedido: planejamentosAlvos.map(PlanejamentoTemporario.createByEntity),
+                        planDoPedido: planDoPedidoPrincipal.map(PlanejamentoTemporario.createByEntity),
                     }
                 );
 
@@ -214,7 +281,15 @@ export class FabricaSimulacaoService {
         //
         this.logger.log('DIVIDA NO PLANEJAMENTO');
 
-        const primeiroSetorDoPipe = props.pipeProducao.getSetorInChain(props.planPivot.setor);
+        const primeiroSetorDoPipe = props.pipeProducao
+            .getSetorInChain(props.planPivot.setor);
+
+        primeiroSetorDoPipe.setMetodoDeReAlocacao(
+            new RealocaPedidoTodoService(
+                this.gerenciadorPlanejamento,
+                new SelecionaItemRops()
+            )
+        )
 
         const { adicionado: realocacao } = await primeiroSetorDoPipe.realocar(
             {

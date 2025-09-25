@@ -23,6 +23,16 @@ export const SetorFabricaProviders: Provider[] = [
         useClass: GerenciadorPlanejamento
     },
     {
+        provide: 'AlocaCapabilidadeRops',
+        useFactory: (g: IGerenciadorPlanejamentConsulta) => new AlocaPorCapabilidade(g, new SelecionaItemRops()),
+        inject: [IGerenciadorPlanejamentConsulta]
+    },
+    {
+        provide: 'RealocaCapabiliadeRops',
+        useFactory: (g: IGerenciadorPlanejamentConsulta) => new RealocaPorCapabilidade(g, new SelecionaItemRops()),
+        inject: [IGerenciadorPlanejamentConsulta]
+    },
+    {
         provide: 'AlocaCapabilidadeMontagem',
         useFactory: (g: IGerenciadorPlanejamentConsulta) => new AlocaPorCapabilidade(g, new SelecionaItem000()),
         inject: [IGerenciadorPlanejamentConsulta]
@@ -33,23 +43,15 @@ export const SetorFabricaProviders: Provider[] = [
         inject: [IGerenciadorPlanejamentConsulta]
     },
     {
+        provide: 'AlocaPorBateladaRops',
+        useFactory: (g: IGerenciadorPlanejamentConsulta) => {
+            return new AlocaPorBatelada(Number(process.env.BATELADAMAX), g, new SelecionaItemRops())
+        },
+        inject: [IGerenciadorPlanejamentConsulta]
+    },
+    {
         provide: 'RealocaBateladaBanho',
         useFactory: (g: IGerenciadorPlanejamentConsulta) => new RealocaPorBateladaService(Number(process.env.BATELADAMAX), g, new SelecionaItemRops()),
-        inject: [IGerenciadorPlanejamentConsulta]
-    },
-    {
-        provide: 'RealocaBateladaPintura',
-        useFactory: (g: IGerenciadorPlanejamentConsulta) => new RealocaPorBateladaService(Number(process.env.PINTURAMAX), g, new SelecionaItemRops()),
-        inject: [IGerenciadorPlanejamentConsulta]
-    },
-    {
-        provide: 'RealocaCapabiliadeRops',
-        useFactory: (g: IGerenciadorPlanejamentConsulta) => new RealocaPorCapabilidade(g, new SelecionaItemRops()),
-        inject: [IGerenciadorPlanejamentConsulta]
-    },
-    {
-        provide: 'AlocaCapabilidadeRops',
-        useFactory: (g: IGerenciadorPlanejamentConsulta) => new AlocaPorCapabilidade(g, new SelecionaItemRops()),
         inject: [IGerenciadorPlanejamentConsulta]
     },
     {
@@ -60,10 +62,8 @@ export const SetorFabricaProviders: Provider[] = [
         inject: [IGerenciadorPlanejamentConsulta]
     },
     {
-        provide: 'AlocaPorBateladaRops',
-        useFactory: (g: IGerenciadorPlanejamentConsulta) => {
-            return new AlocaPorBatelada(Number(process.env.BATELADAMAX), g, new SelecionaItemRops())
-        },
+        provide: 'RealocaBateladaPintura',
+        useFactory: (g: IGerenciadorPlanejamentConsulta) => new RealocaPorBateladaService(Number(process.env.PINTURAMAX), g, new SelecionaItemRops()),
         inject: [IGerenciadorPlanejamentConsulta]
     },
     AlocaItensDependencias,
@@ -104,7 +104,7 @@ export const SetorFabricaProviders: Provider[] = [
                 metodoDeReAlocacao,
             );
         },
-        inject: ['AlocaCapabilidadeRops', 'RealocaCapabiliadeRops'], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaCapabilidadeRops', 'RealocaBateladaPintura'], // Adicione aqui os providers que você quer injetar como dependências
     },
     {
         provide: SetorBanho,
@@ -117,7 +117,7 @@ export const SetorFabricaProviders: Provider[] = [
                 metodoDeReAlocacao,
             );
         },
-        inject: ['AlocaPorBateladaRops', 'RealocaCapabiliadeRops'], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaPorBateladaRops', 'RealocaBateladaBanho'], // Adicione aqui os providers que você quer injetar como dependências
     },
     {
         provide: SetorPinturaLiq,
@@ -130,7 +130,7 @@ export const SetorFabricaProviders: Provider[] = [
                 metodoDeReAlocacao,
             );
         },
-        inject: ['AlocaPorPinutraRops', 'RealocaCapabiliadeRops'], // Adicione aqui os providers que você quer injetar como dependências
+        inject: ['AlocaPorPinutraRops', 'RealocaBateladaPintura'], // Adicione aqui os providers que você quer injetar como dependências
     },
     {
         provide: SetorMontagem,

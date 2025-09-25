@@ -3,10 +3,11 @@ import { MetodoDeAlocacao } from "@libs/lib/modules/planejamento/@core/abstract/
 import { SetorService } from "@libs/lib/modules/planejamento/@core/abstract/SetorService";
 import { CODIGOSETOR } from "@libs/lib/modules/planejamento/@core/enum/CodigoSetor.enum";
 import { PIPE_FABRICACAO } from "../../PipeFrabricacao.provider";
+import { MetodoDeReAlocacao } from "@libs/lib/modules/replanejamento/@core/abstract/MetodoDeReAlocacao";
 
 export class SetorChainFactoryService {
     @Inject(PIPE_FABRICACAO) private pipeProducao: SetorService;
-    
+
     logger = new Logger();
 
     getSetor(setor: CODIGOSETOR): SetorService {
@@ -30,8 +31,27 @@ export class SetorChainFactoryService {
         return pipeProducaoCustom;
     }
 
+
+    setMetodoDeRealocacaoCustomTodos(pipeProducaoCustom: SetorService, setores: CODIGOSETOR[], metodoDeReAlocacao: MetodoDeReAlocacao): SetorService {
+        const pipeAsList = pipeProducaoCustom.getSetoresInChain(setores);
+        pipeAsList.forEach(pipe => pipe.setMetodoDeReAlocacao(metodoDeReAlocacao));
+        return pipeProducaoCustom;
+    }
+
+    setMetodoDeRealocacaoCustomUnico(pipeProducaoCustom: SetorService, setor: CODIGOSETOR, metodoDeReAlocacao: MetodoDeReAlocacao): SetorService {
+        const setorService = pipeProducaoCustom.getSetorInChain(setor);
+        setorService.setMetodoDeReAlocacao(metodoDeReAlocacao);
+        return pipeProducaoCustom;
+    }
+    /**
+     * 
+     * @param codigosAlvos 
+     * @param corrente 
+     * @description essa funcao cria com base nos setores e na corrente principal o pipeline do produto. Os SetoresServices retornados nao são a referencia do pipe principla possibilitando alterações
+     * @returns 
+     */
     modificarCorrente(codigosAlvos: CODIGOSETOR[], corrente?: SetorService): SetorService {
-        const setoresService = (corrente||this.pipeProducao).getSetoresInChainClone(codigosAlvos);
+        const setoresService = (corrente || this.pipeProducao).getSetoresInChainClone(codigosAlvos);
         for (let i = 0; i < setoresService.length - 1; i++) {
             setoresService[i].setNextSetor(setoresService[i + 1]);
         }

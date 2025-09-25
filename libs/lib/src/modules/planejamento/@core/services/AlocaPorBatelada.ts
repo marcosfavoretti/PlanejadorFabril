@@ -7,6 +7,7 @@ import { IGerenciadorPlanejamentConsulta } from "@libs/lib/modules/fabrica/@core
 import { VerificaBatelada } from "@libs/lib/modules/fabrica/@core/classes/VerificaBatelada";
 import { IVerificaCapacidade } from "@libs/lib/modules/fabrica/@core/interfaces/IVerificaCapacidade";
 import { ISelecionarItem } from "@libs/lib/modules/item/@core/interfaces/ISelecionarItem";
+
 export class AlocaPorBatelada
     extends MetodoDeAlocacao {
 

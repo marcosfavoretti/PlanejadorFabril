@@ -12,7 +12,7 @@ export class SetorSolda extends SetorService {
     constructor(
         @Inject(MetodoDeAlocacao) private _metododeAlocacao: MetodoDeAlocacao,
         @Inject(MetodoDeReAlocacao) private _metodoDeReAlocacao: MetodoDeReAlocacao,
-        
+
     ) {
         super(
             CODIGOSETOR.SOLDA,

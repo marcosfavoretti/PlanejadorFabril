@@ -31,20 +31,19 @@ export class CalculaDividaDoPlanejamento implements ICalculoDivida {
       if (!itemMap.has(itemCodigo)) itemMap.set(itemCodigo, []);
       itemMap.get(itemCodigo)!.push(plan);
     }
-    //
+    
     /**
      * monta a estrutura do produto
      */
     const itemEstrutura = await this.montaEstrutura.monteEstrutura(props.pedido.item);
     const itemAsList = itemEstrutura.itensAsList();
-    //
+  
     /**
      * consulta os roteiros dos itens
      */
     const roteirosPorItem = await Promise.all(
       itemAsList.map(i => this.consultarRoteiro.roteiro(i))
     );
-    //
 
     /**
      * verifica cada item da estrutura verficando se quantidade esta ok

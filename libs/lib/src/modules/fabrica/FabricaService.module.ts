@@ -8,7 +8,6 @@ import { MercadoSnapShotService } from "./infra/service/MercadoSnapShot.service"
 import { SyncMercadoManual } from "../planejamento/@core/services/SyncMercadoManual";
 import { ISyncProducao } from "../planejamento/@core/interfaces/ISyncProducao";
 import { GerenciadorPlanejamento } from "./infra/service/GerenciadorPlanejamento";
-import { AlocaPorCapabilidade } from "../planejamento/@core/services/AlocaPorCapabilidade";
 import { RealocaPorCapabilidade } from "../replanejamento/@core/service/RealocaPorCapabilidade";
 import { IGerenciadorPlanejamentoMutation } from "./@core/interfaces/IGerenciadorPlanejamento";
 import { IGerenciadorPlanejamentConsulta } from "./@core/interfaces/IGerenciadorPlanejamentoConsulta";
