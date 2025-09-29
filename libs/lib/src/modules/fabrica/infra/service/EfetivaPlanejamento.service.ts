@@ -4,72 +4,80 @@ import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/cla
 import { Fabrica } from "../../@core/entities/Fabrica.entity";
 import { PlanejamentoSnapShot } from "../../@core/entities/PlanejamentoSnapShot.entity";
 import { SnapShotEstados } from "../../@core/enum/SnapShotEstados.enum";
-import { FabricaService } from "./Fabrica.service";
+import { In } from "typeorm";
+import { PlanejamentoRepository } from "@libs/lib/modules/planejamento/infra/repositories/Planejamento.repo";
 
 @Injectable()
 export class EfetivaPlanejamentoService {
 
   constructor(
+    private readonly planejamentoRepository: PlanejamentoRepository,
     private readonly planejamentoSnapShotRepository: PlanejamentoSnapShotRepository,
   ) { }
 
-  /**
-   * @param fabrica 
-   * @param planejamentosTemporarios 
-   * @returns 
-   * @description funcao especializadas em salvar os snapshots no banco de dados. Se for do mesmo dia e mesmo setor eu garanto que ele sera concatenado. Isso so se aplica aos planejamentos passados
-   */
   async efetiva(
     fabrica: Fabrica,
     planejamentosTemporarios: PlanejamentoTemporario[],
   ): Promise<PlanejamentoSnapShot[]> {
     try {
-      // resolve todos os snapshots em paralelo
+      // 1️⃣ Agrupa os planejamentos por chave única para evitar duplicatas
       const summarizePlans = new Map<string, PlanejamentoTemporario>();
 
       for (const planTemp of planejamentosTemporarios) {
         const key = `${planTemp.setor}-${planTemp.item.getCodigo()}-${planTemp.dia.toISOString()}-${planTemp.pedido.id}`;
         const planInMap = summarizePlans.get(key);
         if (planInMap) {
-          planInMap.qtd += planTemp.qtd;
+          planInMap.qtd += planTemp.qtd; // Acumula a quantidade
         } else {
-          summarizePlans.set(key, { ...planTemp });
+          summarizePlans.set(key, planTemp);
         }
       }
 
-      const novosSnapshots =
-        Array.from(summarizePlans.values()).map((planejamentoTemp) =>
-          this.criarSnapshot(fabrica, planejamentoTemp),
-        );
+      // 2️⃣ Cria os objetos de snapshot e planejamento em memória (sem salvar)
+      const novosSnapshots = Array.from(summarizePlans.values()).map(plan => 
+        this.criarSnapshot(fabrica, plan)
+      );
 
+      // Se não houver snapshots para criar, retorna um array vazio.
+      if (novosSnapshots.length === 0) {
+        return [];
+      }
 
-      console.log('quero ver', planejamentosTemporarios)
+      // 3️⃣ Extrai e salva APENAS os planejamentos para obter seus IDs
+      const planejamentosParaSalvar = novosSnapshots.map(snapshot => snapshot.planejamento);
+      const insertResultPlanejamentos = await this.planejamentoRepository.insert(planejamentosParaSalvar);
 
-      // busca os snapshots já existentes
-      // const snapshotsExistentes = await this.planejamentoSnapShotRepository.find({
-      //   where: { fabrica: { fabricaId: fabrica.fabricaId } },
-      // });
+      // 4️⃣ O PONTO CRÍTICO: Atribui os IDs gerados de volta aos objetos em memória
+      // Isso garante que a relação de chave estrangeira seja estabelecida corretamente.
+      novosSnapshots.forEach((snapshot, index) => {
+        const newId = insertResultPlanejamentos.identifiers[index].planejamentoId; // ou o nome correto da sua PK
+        snapshot.planejamento.planejamentoId = newId;
+      });
 
-      // atualiza a fabrica com todos
-      // const fabricaAtualizada = await this.fabricaService.saveFabrica(fabrica);
+      // 5️⃣ Agora sim, com os IDs de planejamento corretos, salva os snapshots
+      const insertResultSnapshots = await this.planejamentoSnapShotRepository.insert(novosSnapshots);
 
-      const snapShotsSalvos = await this.planejamentoSnapShotRepository.save(novosSnapshots);
-      return snapShotsSalvos;
+      // 6️⃣ Retorna os snapshots recém-criados e salvos para confirmação
+      const ids = insertResultSnapshots.identifiers.map(i => i.planejamentoSnapShotId);
+      
+      const planejamentosSalvos = await this.planejamentoSnapShotRepository.find({
+        where: {
+          planejamentoSnapShotId: In(ids)
+        },
+        // Adicione as relações que você precisa que sejam carregadas
+        relations: ['planejamento', 'planejamento.item', 'planejamento.pedido'],
+      });
+
+      return planejamentosSalvos;
+
     } catch (error) {
       console.error(error);
       throw new Error(`Problemas para salvar o planejamento: ${(error as Error).message}`);
     }
-  }
+}
 
-  async remove(fabrica: Fabrica, ...planejamento: PlanejamentoSnapShot[]): Promise<void> {
-    const snapShotClone = planejamento.map(pl => pl.copy());
-    snapShotClone.forEach(snap => {
-      snap.tipoAcao = SnapShotEstados.delete;
-      snap.fabrica = fabrica;
-    })
-    await this.planejamentoSnapShotRepository.save(snapShotClone);
-  }
 
+  
   /**
    * Cria um snapshot resolvendo o item conforme o setor
    */
@@ -90,6 +98,14 @@ export class EfetivaPlanejamentoService {
       tipoAcao: acao,
     });
   }
+        async remove(fabrica: Fabrica, ...planejamento: PlanejamentoSnapShot[]): Promise<void> {
+          const snapShotClone = planejamento.map(pl => pl.copy());
+          snapShotClone.forEach(snap => {
+            snap.tipoAcao = SnapShotEstados.delete;
+            snap.fabrica = fabrica;
+          })
+          await this.planejamentoSnapShotRepository.save(snapShotClone);
+        }
 
   /**
    * Resolve a ação do snapshot a partir da quantidade

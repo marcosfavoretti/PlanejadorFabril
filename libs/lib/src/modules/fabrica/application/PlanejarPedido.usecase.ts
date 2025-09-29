@@ -49,7 +49,6 @@ export class PlanejarPedidoUseCase {
 
             let fabricaVersionada: Fabrica | undefined = undefined;
 
-            //salvamento do pedido//
             for (const pedido of pedidos) {
                 //requisao para alocacao do pedido
                 const { planejamentos: planejamentosTemporarios } = await this.fabricaSimulacaoService.planejamento(fabricaPrincipal, pedido);
@@ -69,6 +68,7 @@ export class PlanejarPedidoUseCase {
                 //
                 //salvamento do pedido
                 const planejamentos = await this.gerenciadorPlanejamentoMutation.appendPlanejamento(fabricaVersionada, pedido, planejamentosTemporarios);
+                
                 //
                 //roda eventos de pos planejamentos
                 const promises = this.onNovoPlanejamento.map(on =>
@@ -78,7 +78,6 @@ export class PlanejarPedidoUseCase {
                 //
                 pedido.processaPedido();
             }
-
             await this.pedidoService.savePedido(pedidos);
         } catch (error) {
             console.error(error)

@@ -15,6 +15,7 @@ export class PlanejamentoOverWriteByPedidoService implements IGerenciaOverwrite<
             data.sort((a, b) => a.planejamentoSnapShotId - b.planejamentoSnapShotId);
             const resultadoMap = new Map<string, PlanejamentoSnapShot>();
             for (const snapshot of data) {
+                // console.log(snapshot.planejamentoSnapShotId);
                 const item = snapshot.planejamento.item.Item;
                 const dia = snapshot.planejamento.dia.toISOString().slice(0, 10); // só AAAA-MM-DD
                 const setor = snapshot.planejamento.setor.codigo;
@@ -32,6 +33,4 @@ export class PlanejamentoOverWriteByPedidoService implements IGerenciaOverwrite<
             throw error;
         }
     }
-
-
 }

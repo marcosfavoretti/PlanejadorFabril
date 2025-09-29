@@ -26,17 +26,17 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
         return new VerificaCapabilidade(pedido.item, codigoSetor);
     }
 
-    protected async diasPossiveis(fabrica: Fabrica, pedido: Pedido, setor: CODIGOSETOR): Promise<Date[]> {
+    protected async diasPossiveis(fabrica: Fabrica, pedido: Pedido, setor: CODIGOSETOR, planejamentoFabril: PlanejamentoTemporario[]): Promise<Date[]> {
         try {
             const dias = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
-                fabrica,
                 pedido.getSafeDate(),
                 setor,
                 pedido.item,
                 pedido.lote,
-                new VerificaCapabilidade(pedido.item, setor)
+                new VerificaCapabilidade(pedido.item, setor),
+                planejamentoFabril
             );
-            return dias;
+            return Array.from(dias.keys());
         } catch (error) {
             console.error(error);
             throw new Error(`Problema a consultar as datas para adiantar a producao\n${error}`)
@@ -46,7 +46,6 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
     protected async alocacaoComDependencia(
         props: AlocacaoComDependenciaProps
     ): Promise<PlanejamentoTemporario[]> {
-
         const planejamentosTemporarios: PlanejamentoTemporario[] = [];
         const leadtime = props.pedido.getItem().getLeadtime(props.setor);
         const planejamentosProxOrdenados = props.planDoProximoSetor.sort(this.sortStrategy());
@@ -56,78 +55,65 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
             if (restante <= 0) break;
 
             const precisoAlocar = planejamento.qtd;
-            //planejamentoProximoSetor.reduce((total, plan) => total += plan.qtd, 0);
 
-            let dataLimite = leadtime > 0 ?
-                subBusinessDays(planejamento.dia, leadtime) : planejamento.dia;
+            // calcula data limite considerando leadtime
+            const dataLimite =
+                leadtime > 0
+                    ? subBusinessDays(planejamento.dia, leadtime)
+                    : planejamento.dia;
 
-            const datas = await this.gerenciadorPlan
-                .diaParaAdiantarProducaoEncaixe(
-                    props.fabrica,
-                    dataLimite,
-                    props.setor,
-                    props.itemContext,
-                    props.pedido.lote,
-                    new VerificaCapabilidade(
-                        props.pedido.item,
-                        props.setor
-                    ),
-                    planejamentosTemporarios
-                );
-
-
-            const qtdMatriz: number[] = await Promise.all(
-                datas.map(data =>
-                    this.gerenciadorPlan
-                        .possoAlocarQuantoNoDia(
-                            props.fabrica,
-                            data,
-                            props.setor,
-                            props.itemContext,
-                            new VerificaCapabilidade(
-                                props.pedido.item,
-                                props.setor
-                            ),
-                            planejamentosTemporarios
-                        )
-                )
+            // gera as primeiras datas possíveis
+            let fila = Array.from(
+                (
+                    await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
+                        dataLimite,
+                        props.setor,
+                        props.itemContext,
+                        props.pedido.lote,
+                        new VerificaCapabilidade(props.pedido.item, props.setor),
+                        props.planejamentoFabril,
+                        planejamentosTemporarios
+                    )
+                ).entries()
             );
 
-            console.log(`TESASDAD ${props.setor}`, datas.map((a, i) => `${a.toISOString()} ${qtdMatriz[i]}`))
+            // consome a fila até terminar o restante
+            while (fila.length > 0 && restante > 0) {
+                const [data, qtd] = fila.shift()!;
 
-            for (const [index, data] of datas.entries()) {
-                const possoAlocarNesseDia = qtdMatriz[index];
                 const qtdParaAlocar = Math.min(
                     restante,
-                    possoAlocarNesseDia || Infinity,
+                    qtd || Infinity,
                     props.pedido.item.capabilidade(props.setor)
                 );
-                if (qtdParaAlocar <= 0) continue;
-                planejamentosTemporarios.push({
-                    dia: data,
-                    item: props.itemContext,
-                    pedido: props.pedido,
-                    qtd: qtdParaAlocar,
-                    setor: props.setor,
-                });
-                restante -= qtdParaAlocar;
-                if (restante <= 0) break; // encerramento antecipado
-                if (index + 1 === datas.length && restante > 0) {
-                    //se é a ultima exec e ainda nao foi tudo tenho que adicionar mais datas para tentar
-                    const novasDatas = await this.gerenciadorPlan
-                        .diaParaAdiantarProducaoEncaixe(
-                            props.fabrica,
-                            data,
-                            props.setor,
-                            props.itemContext,
-                            precisoAlocar,
-                            new VerificaCapabilidade(props.pedido.item, props.setor),
-                            planejamentosTemporarios,
-                        );
-                    datas.push(...novasDatas);
+
+                if (qtdParaAlocar > 0) {
+                    planejamentosTemporarios.push({
+                        dia: data,
+                        item: props.itemContext,
+                        pedido: props.pedido,
+                        qtd: qtdParaAlocar,
+                        setor: props.setor,
+                    });
+                    restante -= qtdParaAlocar;
+                }
+
+                // fila acabou mas ainda falta -> busca mais datas
+                if (fila.length === 0 && restante > 0) {
+                    const novasDatas = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
+                        data,
+                        props.setor,
+                        props.itemContext,
+                        precisoAlocar, // usa qtd do próximo setor
+                        new VerificaCapabilidade(props.pedido.item, props.setor),
+                        props.planejamentoFabril,
+                        planejamentosTemporarios
+                    );
+                    fila.push(...novasDatas.entries());
                 }
             }
         }
+
         return planejamentosTemporarios;
     }
 
@@ -135,35 +121,18 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
         try {
             const planejamentosDoPedido: PlanejamentoTemporario[] = [];
             let restante = props.pedido.getLote();
-            let i = 0;
+            // let i = 0;
             props.dias.sort((a, b) => b.getTime() - a.getTime());
-            while (restante > 0 && i < props.dias.length) {
-                let dia = props.dias[i];
-
-                let capacidadeRestante = await this.gerenciadorPlan.possoAlocarQuantoNoDia(
-                    props.fabrica,
-                    dia,
-                    props.setor,
-                    props.itemContext,
-                    new VerificaCapabilidade(props.pedido.item, props.setor), planejamentosDoPedido
-                );
-
-                if (capacidadeRestante <= 0) {
-                    const [primeiroDiaComEncaixe, ...outrosDiasComEncaixe] = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
-                        props.fabrica, dia,
-                        props.setor,
-                        props.itemContext,
-                        restante,
-                        new VerificaCapabilidade(props.pedido.item, props.setor),
-                        planejamentosDoPedido
-                    );
-                    props.dias.push(...outrosDiasComEncaixe);
-                    dia = primeiroDiaComEncaixe;
-                    capacidadeRestante = await this.gerenciadorPlan.possoAlocarQuantoNoDia(props.fabrica, dia, props.setor, props.pedido.item, new VerificaCapabilidade(props.pedido.item, props.setor), planejamentosDoPedido);
-                }
-
-                const quantidadeParaAlocar = Math.min(restante, capacidadeRestante);
-
+            const diasXqtd = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
+                props.pedido.getSafeDate(),
+                props.setor,
+                props.pedido.item,
+                props.pedido.lote,
+                new VerificaCapabilidade(props.pedido.item, props.setor),
+                props.planejamentoFabril
+            );
+            for (const [dia, qtd] of diasXqtd) {
+                const quantidadeParaAlocar = Math.min(restante, qtd);
                 planejamentosDoPedido.push({
                     dia: dia,
                     item: props.itemContext,
@@ -171,23 +140,61 @@ export class AlocaPorCapabilidade extends MetodoDeAlocacao {
                     qtd: quantidadeParaAlocar,
                     setor: props.setor
                 });
-
                 restante -= quantidadeParaAlocar;
-
-                if (restante > 0 && i === props.dias.length - 1) {
-                    const [novaData] = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
-                        props.fabrica,
-                        this.calendario.subDays(dia, 1),
-                        props.setor,
-                        props.pedido.item,
-                        restante,
-                        new VerificaCapabilidade(props.pedido.item, props.setor),
-                        planejamentosDoPedido
-                    );
-                    props.dias.push(novaData);
-                }
-                i++;
             }
+            // while (restante > 0 && i < props.dias.length) {
+            //     let dia = props.dias[i];
+
+            //     let capacidadeRestante = await this.gerenciadorPlan.possoAlocarQuantoNoDia(
+            //         dia,
+            //         props.setor,
+            //         props.itemContext,
+            //         new VerificaCapabilidade(props.pedido.item, props.setor),
+            //         props.planejamentoFabril,
+            //         planejamentosDoPedido
+            //     );
+
+            //     if (capacidadeRestante <= 0) {
+            //         const [primeiroDiaComEncaixe, ...outrosDiasComEncaixe] = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
+            //             dia,
+            //             props.setor,
+            //             props.itemContext,
+            //             restante,
+            //             new VerificaCapabilidade(props.pedido.item, props.setor),
+            //             props.planejamentoFabril,
+            //             planejamentosDoPedido
+            //         );
+            //         props.dias.push(...outrosDiasComEncaixe);
+            //         dia = primeiroDiaComEncaixe;
+            //         capacidadeRestante = await this.gerenciadorPlan.possoAlocarQuantoNoDia(props.fabrica, dia, props.setor, props.pedido.item, new VerificaCapabilidade(props.pedido.item, props.setor), planejamentosDoPedido);
+            //     }
+
+            //     const quantidadeParaAlocar = Math.min(restante, capacidadeRestante);
+
+            //     planejamentosDoPedido.push({
+            //         dia: dia,
+            //         item: props.itemContext,
+            //         pedido: props.pedido,
+            //         qtd: quantidadeParaAlocar,
+            //         setor: props.setor
+            //     });
+
+            //     restante -= quantidadeParaAlocar;
+
+            //     if (restante > 0 && i === props.dias.length - 1) {
+            //         const [novaData] = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
+            //             this.calendario.subDays(dia, 1),
+            //             props.setor,
+            //             props.pedido.item,
+            //             restante,
+            //             new VerificaCapabilidade(props.pedido.item, props.setor),
+            //             props.planejamentoFabril,
+            //             planejamentosDoPedido
+            //         );
+            //         props.dias.push(novaData);
+            //     }
+            //     i++;
+            // }
             console.log('terminei alocacao')
             return planejamentosDoPedido;
         } catch (error) {

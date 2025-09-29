@@ -19,7 +19,7 @@ export type AlocacaoComDependenciaProps = HookAlocacaoProps & {
     itemContext: Item
 }
 
-export type AlocacaoSemDependenciaProps = {
+export type AlocacaoSemDependenciaProps = HookAlocacaoProps & {
     fabrica: Fabrica,
     pedido: Pedido,
     setor: CODIGOSETOR,
@@ -36,7 +36,9 @@ export abstract class MetodoDeAlocacao {
     ) { }
 
     //TODO: preciso melhorar a logica desse metodo, talvez tirar daqui
-    protected abstract diasPossiveis(fabrica: Fabrica, pedido: Pedido, setor: CODIGOSETOR): Promise<Date[]>;
+    // protected abstract diasPossiveis(
+    //     fabrica: Fabrica, pedido: Pedido, setor: CODIGOSETOR, planejamentoFabril: PlanejamentoTemporario[]
+    // ): Promise<Date[]>;
 
     protected abstract alocacao(
         props: AlocacaoSemDependenciaProps
@@ -46,15 +48,15 @@ export abstract class MetodoDeAlocacao {
         props: AlocacaoComDependenciaProps
     ): Promise<PlanejamentoTemporario[]>;
 
-    abstract verificacaoCapacidade(pedido: Pedido, codigoSetor: CODIGOSETOR): IVerificaCapacidade;
-    
+    abstract verificacaoCapacidade(
+        pedido: Pedido, codigoSetor: CODIGOSETOR
+    ): IVerificaCapacidade;
+
     public async hookAlocacao(
         props: HookAlocacaoProps
     ): Promise<PlanejamentoTemporario[]> {
         const itemContext = this.Itemselecionador.seleciona(props.estrutura);
-        
-        if(!itemContext) throw new Error('Não foi selecionado nenhuma item');
-
+        if (!itemContext) throw new Error('Não foi selecionado nenhuma item');
         const planejamento: PlanejamentoTemporario[] = [];
         if ((props.planDoProximoSetor && props.planDoProximoSetor.length) || (props.planBase && props.planBase.length)) {
             // const alocacao = await this.alocacaoComDependencia(props.fabrica, props.pedido, props.setor, props.planDoProximoSetor);
@@ -66,9 +68,10 @@ export abstract class MetodoDeAlocacao {
             planejamento.push(...alocacao);
         }
         else {
-            const diasDoSetor = await this.diasPossiveis(props.fabrica, props.pedido, props.setor);
+            // const diasDoSetor = await this.diasPossiveis(props.fabrica, props.pedido, props.setor, props.planejamentoFabril);
             const alocacao = await this.alocacao({
-                dias: diasDoSetor,
+                ...props,
+                dias: [],//todo tirar isso aqui plmd
                 fabrica: props.fabrica,
                 pedido: props.pedido,
                 setor: props.setor,

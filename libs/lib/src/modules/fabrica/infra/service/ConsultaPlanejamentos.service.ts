@@ -229,7 +229,8 @@ export class ConsultaPlanejamentoService {
                         item: {
                             Item: item.getCodigo()
                         },
-                        dia: Raw(alias => `CAST(${alias} AS DATE) = :dia`, { dia })
+                        dia
+                     //   dia: Raw(alias => `CAST(${alias} AS DATE) = :dia`, { dia })
                     }
                 }
             });

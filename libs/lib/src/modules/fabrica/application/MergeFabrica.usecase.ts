@@ -1,7 +1,6 @@
 import { Inject, InternalServerErrorException } from "@nestjs/common";
 import { FabricaResponseDto } from "@dto/FabricaResponse.dto";
 import { FabricaService } from "../infra/service/Fabrica.service";
-import { ConsutlarFabricaDTO } from "@dto/ConsultarFabrica.dto";
 import { ForkFabricaService } from "../infra/service/ForkFabrica.service";
 import { ValidaFabrica } from "../ValidaFabrica.provider";
 import { IValidaFabrica } from "../@core/interfaces/IValidaFabrica";
@@ -35,7 +34,8 @@ export class MergeFabricaUseCase {
             const fabricaMergiada = await this.forkFabricaService.fork({
                 fabrica: fabrica,
                 isPrincipal: true,
-                user: fabrica.user
+                user: fabrica.user,
+                forceCheckPoint: true
             });
             const fabricaSalva = await this.fabricaService.saveFabrica(fabricaMergiada);
             //

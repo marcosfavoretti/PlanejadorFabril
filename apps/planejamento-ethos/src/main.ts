@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ClassSerializerInterceptor, Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { config } from 'dotenv';
+import { FastApiStyleLoggingInterceptor } from './interceptor/FastApiStyleLoggingInterceptor.interceptor';
 config();
 const logger = new Logger();
 
@@ -23,7 +24,7 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
   }));
 
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)), new FastApiStyleLoggingInterceptor());
 
 
   app.setGlobalPrefix('api');

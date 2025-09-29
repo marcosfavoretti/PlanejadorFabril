@@ -11,5 +11,6 @@ export type RealocacaoProps = {
     planFalho: PlanejamentoTemporario
     novoDia: Date,
     planDoPedido: PlanejamentoTemporario[],
+    planejamentoFabril: PlanejamentoTemporario[],
     realocacaoUltSetor?: RealocacaoParcial
 }

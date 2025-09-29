@@ -6,11 +6,9 @@ import { PedidoService } from "@libs/lib/modules/pedido/infra/service/Pedido.ser
 import { ApagaPedidoPlanejadoService } from "../infra/service/ApagaPedidoPlanejado.service";
 import { IGerenciadorPlanejamentoMutation } from "../@core/interfaces/IGerenciadorPlanejamento";
 import { GerenciaDividaService } from "../infra/service/GerenciaDivida.service";
-import { ICalculoDivida } from "../@core/interfaces/ICalculoDivida";
 
 export class ReplanejarPedidoUseCase {
     constructor(
-        @Inject(ICalculoDivida) private calculoDivida: ICalculoDivida,
         @Inject(FabricaService) private fabricaService: FabricaService,
         @Inject(GerenciaDividaService) private gerenciaDividaService: GerenciaDividaService,
         @Inject(PedidoService) private pedidoService: PedidoService,
@@ -20,6 +18,7 @@ export class ReplanejarPedidoUseCase {
     ) { }
 
     async replanejar(dto: ReplanejarPedidoDTO): Promise<void> {
+        console.time()
         const fabrica = await this.fabricaService.consultaFabrica(dto.fabricaId);
         const pedido = await this.pedidoService.consultarPedido(dto.pedidoId);
 
@@ -34,10 +33,11 @@ export class ReplanejarPedidoUseCase {
             )
         ])
 
-        const { planejamentos } = await this.fabricaSimulacao.planejamento(
-            fabrica,
-            pedido
-        );
+        const { planejamentos } = await this.fabricaSimulacao
+            .planejamento(
+                fabrica,
+                pedido
+            );
 
         const dividas = await this.gerenciaDividaService
             .resolverDividas({

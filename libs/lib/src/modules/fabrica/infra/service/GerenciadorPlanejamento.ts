@@ -1,7 +1,7 @@
 import { Calendario } from "@libs/lib/modules/shared/@core/classes/Calendario";
 import type { IGerenciadorPlanejamentoMutation } from "../../@core/interfaces/IGerenciadorPlanejamento";
 import { Planejamento } from "../../../planejamento/@core/entities/Planejamento.entity";
-import { Inject } from "@nestjs/common";
+import { Inject, Logger } from "@nestjs/common";
 import { CODIGOSETOR } from "../../../planejamento/@core/enum/CodigoSetor.enum";
 import { Item } from "../../../item/@core/entities/Item.entity";
 import { IGerenciadorPlanejamentConsulta } from "../../@core/interfaces/IGerenciadorPlanejamentoConsulta";
@@ -14,7 +14,7 @@ import { Pedido } from "@libs/lib/modules/pedido/@core/entities/Pedido.entity";
 import { PlanejamentoOverWriteByPedidoService } from "../../@core/services/PlanejamentoOverWriteByPedido.service";
 import { IVerificaCapacidade } from "../../@core/interfaces/IVerificaCapacidade";
 import { PlanejamentoSnapShot } from "../../@core/entities/PlanejamentoSnapShot.entity";
-import { addBusinessDays, subBusinessDays, subDays } from "date-fns";
+import { addBusinessDays, isSameDay, subBusinessDays } from "date-fns";
 
 export class GerenciadorPlanejamento implements
     IGerenciadorPlanejamentoMutation,
@@ -35,7 +35,9 @@ export class GerenciadorPlanejamento implements
         planejamentosNovos: PlanejamentoTemporario[]
     ): Promise<Planejamento[]> {
         await this.planejamentoValidatorExecutor.execute(fabrica, pedido, planejamentosNovos);
+        console.time('efetiva')
         const resultados = await this.efetivaPlanejamentoService.efetiva(fabrica, planejamentosNovos);
+        console.timeEnd('efetiva')
         return resultados.flatMap(plan => plan.planejamento);
     }
 
@@ -52,217 +54,225 @@ export class GerenciadorPlanejamento implements
         await Promise.all(planPromises);
     }
 
-    async rangeDeDiasPossiveisRetroativos(fabrica: Fabrica, dataPonteiro: Date, setor: CODIGOSETOR, item: Item, qtd: number, estrategiaVerificacao: IVerificaCapacidade, qtdDias?: number, planTemp?: PlanejamentoTemporario[]): Promise<Map<Date, number>> {
-        const responseMap = new Map<Date, number>();
-        let quantoPreciso = qtd;
-        let quantosDias = qtdDias || 2;
-        const diasUsados = new Set<string>();
-        const MAX_TENTATIVAS = 1_000;
-        let dataValidacao = new Date(dataPonteiro);
-        for (let tentativa = 0; (quantoPreciso > 0 && quantosDias > 0); tentativa++) {
-            const chave = dataValidacao.toISOString().split("T")[0];
-            if (!diasUsados.has(chave)) {
-                diasUsados.add(chave);
-                const quantoAloco = await this.possoAlocarQuantoNoDia(
-                    fabrica,
-                    dataValidacao,
-                    setor,
-                    item,
-                    estrategiaVerificacao,
-                    planTemp
-                );
-                if (quantoAloco <= 0) continue;
-                responseMap.set(dataValidacao, quantoAloco);
-                quantosDias -= 1;
-                quantoPreciso -= quantoAloco;
-            }
-            dataValidacao = subBusinessDays(dataValidacao, 1);
-            if(MAX_TENTATIVAS===tentativa) throw Error('Maximo de tentativas atigidas');
-        }
-        return responseMap
-    }
+    // async rangeDeDiasPossiveisRetroativos(fabrica: Fabrica,
+    //     dataPonteiro: Date,
+    //     setor: CODIGOSETOR,
+    //     item: Item,
+    //     qtd: number,
+    //     estrategiaVerificacao: IVerificaCapacidade,
+    //     qtdDias?: number,
+    //     planTemp?: PlanejamentoTemporario[]
+    // ): Promise<Map<Date, number>> {
+    //     const responseMap = new Map<Date, number>();
+    //     let quantoPreciso = qtd;
+    //     let quantosDias = qtdDias || 2;
+    //     const diasUsados = new Set<string>();
+    //     const MAX_TENTATIVAS = 1_000;
+    //     let dataValidacao = new Date(dataPonteiro);
+    //     for (let tentativa = 0; (quantoPreciso > 0 && quantosDias > 0); tentativa++) {
+    //         const chave = dataValidacao.toISOString().split("T")[0];
+    //         if (!diasUsados.has(chave)) {
+    //             diasUsados.add(chave);
+    //             const quantoAloco = await this.possoAlocarQuantoNoDia(
+    //                 fabrica,
+    //                 dataValidacao,
+    //                 setor,
+    //                 item,
+    //                 estrategiaVerificacao,
+    //                 planTemp
+    //             );
+    //             if (quantoAloco <= 0) continue;
+    //             responseMap.set(dataValidacao, quantoAloco);
+    //             quantosDias -= 1;
+    //             quantoPreciso -= quantoAloco;
+    //         }
+    //         dataValidacao = subBusinessDays(dataValidacao, 1);
+    //         if (MAX_TENTATIVAS === tentativa) throw Error('Maximo de tentativas atigidas');
+    //     }
+    //     return responseMap
+    // }
 
-    async appendPlanejamento(fabrica: Fabrica, pedido: Pedido, planejamentosTemp: PlanejamentoTemporario[]): Promise<Planejamento[]> {
+    async appendPlanejamento(
+        fabrica: Fabrica,
+        pedido: Pedido,
+        planejamentosTemp: PlanejamentoTemporario[]
+    ): Promise<Planejamento[]> {
         await this.planejamentoValidatorExecutor
             .execute(fabrica, pedido, planejamentosTemp);
+        const noBancoAtual = await this.consultaPlanejamentoService.consultaPlanejamentoAtual(
+            fabrica,
+            new PlanejamentoOverWriteByPedidoService()
+        );
         for (const planejamentoTemp of planejamentosTemp) {
-            const planejamentoSemelhante = await this.consultaPlanejamentoService.consultaItemNoSetorNoDia(
-                fabrica,
-                planejamentoTemp.item,
-                planejamentoTemp.setor,
-                planejamentoTemp.dia,
-                new PlanejamentoOverWriteByPedidoService()
+            const planejamentosSemelhantes = noBancoAtual.filter(
+                bd => 
+                    isSameDay(bd.planejamento.dia, planejamentoTemp.dia) &&
+                    bd.planejamento.item.getCodigo() === planejamentoTemp.item.getCodigo() &&
+                    bd.planejamento.setor.codigo === planejamentoTemp.setor &&
+                    bd.planejamento.pedido.id === planejamentoTemp.pedido.id
+            ).reduce(
+                (total, planSnapShot) => total += planSnapShot.planejamento.qtd, 0
             );
-            const planejamentoSemelhanteQtd = planejamentoSemelhante
-                .filter(p => p.planejamento.pedido.id === pedido.id)
-                .reduce((total, planSnapShot) => total += planSnapShot.planejamento.qtd, 0);
-            planejamentoTemp.qtd = planejamentoSemelhanteQtd + planejamentoTemp.qtd;
+            planejamentoTemp.qtd = planejamentosSemelhantes + planejamentoTemp.qtd;
         }//CONCATENA DOIS PLANEJADOS DO MESMO PEDIDO NO MESMO DIA
         const resultados = await this.efetivaPlanejamentoService.efetiva(fabrica, planejamentosTemp);
         return resultados.flatMap(plan => plan.planejamento);
     }
 
     async diaParaAdiarProducaoEncaixe(
-        fabrica: Fabrica,
         dataPonteiro: Date,
         setor: CODIGOSETOR,
         item: Item,
         qtd: number,
         estrategiaVerificacao: IVerificaCapacidade,
+        planejamentoBanco: PlanejamentoTemporario[],
         planejamentosTemporarios: PlanejamentoTemporario[] = []
-    ): Promise<Date[]> {
-        const maxTentativas = 2_000;
-        let quantoPreciso = qtd;
-        console.log(`preciso alocarr ${qtd}`)
-        const encontrouDatas: Date[] = [];
+    ): Promise<Map<Date, number>> {
+        const responseMap = new Map<Date, number>();
         const diasUsados = new Set<number>();
+
+        let quantoPreciso = qtd;
         let ponteiro = new Date(dataPonteiro);
-        for (let tentativa = 0; tentativa < maxTentativas && quantoPreciso > 0; tentativa++) {
+
+        for (let tentativa = 0; tentativa < 2_000 && quantoPreciso > 0; tentativa++) {
+            // já usei esse dia?
             if (diasUsados.has(ponteiro.getTime())) {
-                const proximo = this.calendario.proximoDiaUtilReplanejamento(ponteiro);
-                if (proximo.getTime() === ponteiro.getTime()) break; // sem avanço possível
-                ponteiro = proximo;
+                ponteiro = this.obterProximoDia(ponteiro);
                 continue;
             }
             diasUsados.add(ponteiro.getTime());
+
+            // quanto consigo alocar nesse dia
             const capacidade = await this.possoAlocarQuantoNoDia(
-                fabrica,
                 ponteiro,
                 setor,
                 item,
                 estrategiaVerificacao,
+                planejamentoBanco,
                 planejamentosTemporarios
             );
+
             if (capacidade > 0) {
-                encontrouDatas.push(new Date(ponteiro));
+                responseMap.set(new Date(ponteiro.getTime()), capacidade);
                 quantoPreciso -= capacidade;
             }
-            console.log(quantoPreciso, capacidade)
-            const proximo = addBusinessDays(ponteiro, 1);
-            if (proximo.getTime() === ponteiro.getTime()) break; // evita loop preso
-            ponteiro = proximo;
+
+            ponteiro = this.obterProximoDia(ponteiro);
         }
+
         if (quantoPreciso > 0) {
-            throw new Error(`Não foi possível encontrar dias suficientes para adiar a produção. ${dataPonteiro.toLocaleDateString()} ${setor} ${qtd}`);
+            throw new Error(
+                `Não foi possível adiar a produção: setor=${setor}, pedido=${qtd}, faltaram=${quantoPreciso}, diasTestados=${diasUsados.size}`
+            );
         }
-        return encontrouDatas;
+
+        return responseMap;
     }
 
-    //TODO melhorar funcao abaixo muito lerda
+    // helper privado
+    private obterProximoDia(atual: Date): Date {
+        const proximo = this.calendario.proximoDiaUtilReplanejamento(atual);
+        if (proximo.getTime() === atual.getTime()) {
+            // fallback: tenta pelo menos avançar 1 dia útil
+            return addBusinessDays(atual, 1);
+        }
+        return proximo;
+    }
+
     /**
      * @param dataPonteiro 
      * @param setor 
      * @param item 
-     * @returns 
-     * @description Devolvo uma lista de dias que juntam totalizam a quantidade de producao que foi pedido
+     * @param qtd 
+     * @returns Map com os dias e quanto foi alocado em cada um
+     * @description Busca dias anteriores ao dataPonteiro que juntos totalizam a quantidade de produção pedida
      */
     async diaParaAdiantarProducaoEncaixe(
-        fabrica: Fabrica,
         dataPonteiro: Date,
         setor: CODIGOSETOR,
         item: Item,
         qtd: number,
         estrategiaVerificacao: IVerificaCapacidade,
+        planejamentoBanco: PlanejamentoTemporario[],
         planejamentosTemporarios: PlanejamentoTemporario[] = []
-    ): Promise<Date[]> {
-        const maxTentativas = 2_000;
-        let quantoPreciso = qtd;
-        console.log(`preciso alocar ${qtd}`)
-        const encontrouDatas: Date[] = [];
+    ): Promise<Map<Date, number>> {
+        const resultado = new Map<Date, number>();
         const diasUsados = new Set<number>();
-        let ponteiro = dataPonteiro;
-        for (let tentativa = 0; tentativa < maxTentativas && quantoPreciso > 0; tentativa++) {
+
+        let quantoPreciso = qtd;
+        let ponteiro = new Date(dataPonteiro);
+
+        for (let tentativa = 0; tentativa < 2_000 && quantoPreciso > 0; tentativa++) {
+            // já usei esse dia?
             if (diasUsados.has(ponteiro.getTime())) {
-                const proximo = subBusinessDays(ponteiro, 1);
-                if (proximo.getTime() === ponteiro.getTime()) break; // sem avanço possível
-                ponteiro = proximo;
+                ponteiro = this.obterDiaAnterior(ponteiro);
                 continue;
             }
             diasUsados.add(ponteiro.getTime());
+
+            // quanto consigo alocar nesse dia
             const capacidade = await this.possoAlocarQuantoNoDia(
-                fabrica,
                 ponteiro,
                 setor,
                 item,
                 estrategiaVerificacao,
+                planejamentoBanco,
                 planejamentosTemporarios
             );
 
             if (capacidade > 0) {
-                encontrouDatas.push(new Date(ponteiro));
+                resultado.set(new Date(ponteiro.getTime()), capacidade);
                 quantoPreciso -= capacidade;
             }
 
-            console.log(quantoPreciso, capacidade)
-
-            ponteiro = subBusinessDays(ponteiro, 1);
+            ponteiro = this.obterDiaAnterior(ponteiro);
         }
 
         if (quantoPreciso > 0) {
-            throw new Error(`Não foi possível encontrar dias suficientes para adiar a produção. ${dataPonteiro.toLocaleDateString()} ${setor} ${qtd}`);
+            throw new Error(
+                `Não foi possível adiantar a produção: setor=${setor}, pedido=${qtd}, faltaram=${quantoPreciso}, diasTestados=${diasUsados.size}`
+            );
         }
 
-        return encontrouDatas;
-        // const retries = 100;
-        // let quantoPreciso = qtd;
-        // const findDates: Array<Date> = [];
-        // let diaAlvo = dataPonteiro;
-        // const diasUsados = new Set<number>();
-
-        // for (let i = 0; i < retries && quantoPreciso > 0; i++) {
-        //     // Evita repetir o mesmo dia
-        //     if (diasUsados.has(diaAlvo.getTime())) {
-        //         diaAlvo = this.calendario.diasPossiveis(this.calendario.subDays(diaAlvo, 1), 1)[0];
-        //         continue;
-        //     }
-        //     diasUsados.add(diaAlvo.getTime());
-        //     const capacidadePersistida = await this.possoAlocarQuantoNoDia(
-        //         fabrica,
-        //         diaAlvo,
-        //         setor,
-        //         item,
-        //         estrategiaVerificacao,
-        //         planejamentosTemporarios
-        //     );
-        //     if (capacidadePersistida > 0) {
-        //         findDates.push(diaAlvo);
-        //         quantoPreciso -= capacidadePersistida;
-        //     }
-        //     diaAlvo = this.calendario.diasPossiveis(this.calendario.subDays(diaAlvo, 1), 1)[0];
-        // }
-        // if (quantoPreciso > 0) {
-        //     throw new Error('Não foi possível encontrar dias suficientes para adiantar a produção.');
-        // }
-        // return findDates;
+        return resultado;
     }
 
+    // helper privado
+    private obterDiaAnterior(atual: Date): Date {
+        const anterior = subBusinessDays(atual, 1);
+        if (anterior.getTime() === atual.getTime()) {
+            return atual; // evita loop preso
+        }
+        return anterior;
+    }
 
-
-    async possoAlocarQuantoNoDia(fabrica: Fabrica, dia: Date, setor: CODIGOSETOR, item: Item, estrategiaVerificacao: IVerificaCapacidade, planejamentosTemporarios?: PlanejamentoTemporario[]): Promise<number> {
+    async possoAlocarQuantoNoDia(
+        dia: Date,
+        setor: CODIGOSETOR,
+        item: Item,
+        estrategiaVerificacao: IVerificaCapacidade,
+        planejamentosBanco: PlanejamentoTemporario[],
+        planejamentosTemporarios?: PlanejamentoTemporario[]
+    ): Promise<number> {
         try {
-            const planejamentos = await this.consultaPlanejamentoService
-                .consultaItemNoSetorNoDia(
-                    fabrica,
-                    item,
-                    setor,
-                    dia,
-                    new PlanejamentoOverWriteByPedidoService()
-                );
 
-            const totalPlanejadoSalvo = planejamentos
-                .reduce((total, p) => total + Number(p.planejamento.qtd), 0);
-
-            const totalPlanejadoTemporario = (planejamentosTemporarios ?? [])
-                .filter(p =>
-                    this.calendario.ehMesmoDia(p.dia, dia) &&
-                    p.item.getCodigo() === item.getCodigo() &&
-                    p.setor === setor
-                )
+            const filterMesmoDiaEMesmoitemEMesmoSetor = (p: PlanejamentoTemporario) => (isSameDay(p.dia, dia) &&
+                p.item.getCodigo() === item.getCodigo() &&
+                p.setor === setor
+            );
+            /**
+             * soma planejados do mesmo setor, item e dia
+             */
+            const totalPlanejadoSalvo = planejamentosBanco
+                .filter(filterMesmoDiaEMesmoitemEMesmoSetor)
                 .reduce((total, p) => total + p.qtd, 0);
 
+            const totalPlanejadoTemporario = (planejamentosTemporarios ?? [])
+                .filter(filterMesmoDiaEMesmoitemEMesmoSetor)
+                .reduce((total, p) => total + p.qtd, 0);
+            //
             const totalPlanejado = totalPlanejadoSalvo + totalPlanejadoTemporario;
             const restante = estrategiaVerificacao.calculaCapacidade(totalPlanejado);
-            console.log(`ve aqui ${setor}`, totalPlanejadoSalvo, totalPlanejadoTemporario, totalPlanejado, restante)
             return Math.max(0, restante);
         } catch (error) {
             console.error(error);
@@ -271,27 +281,27 @@ export class GerenciadorPlanejamento implements
     }
 
     async possoAlocarNoDia(
-        fabrica: Fabrica,
         dia: Date,
         setor: CODIGOSETOR,
         item: Item,
         qtd: number,
         estrategiaVerificacao: IVerificaCapacidade,
+        planejamentoBanco: PlanejamentoTemporario[],
         planejamentosTemporarios?: PlanejamentoTemporario[]
     ): Promise<boolean> {
         try {
-            const planejamentos = await this.consultaPlanejamentoService
-                .consultaItemNoSetorNoDia(fabrica, item, setor, dia, new PlanejamentoOverWriteByPedidoService());
 
-            const totalPlanejadoSalvo = planejamentos
-                .reduce((total, p) => total + Number(p.planejamento.qtd), 0);
+            const filterMesmoDiaEMesmoitemEMesmoSetor = (p: PlanejamentoTemporario) => (isSameDay(p.dia, dia) &&
+                p.item.getCodigo() === item.getCodigo() &&
+                p.setor === setor
+            );
+
+            const totalPlanejadoSalvo = planejamentoBanco
+                .filter(filterMesmoDiaEMesmoitemEMesmoSetor)
+                .reduce((total, p) => total + Number(p.qtd), 0);
 
             const totalPlanejadoTemporario = (planejamentosTemporarios ?? [])
-                .filter(p =>
-                    this.calendario.ehMesmoDia(p.dia, dia) &&
-                    p.pedido.item.getCodigo() === item.getCodigo() &&
-                    p.setor === setor
-                )
+                .filter(filterMesmoDiaEMesmoitemEMesmoSetor)
                 .reduce((total, p) => total + p.qtd, 0);
 
             const totalPlanejado = totalPlanejadoSalvo + totalPlanejadoTemporario;

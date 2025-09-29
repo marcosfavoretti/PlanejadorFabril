@@ -14,9 +14,13 @@ export class ValidaData implements IValidaPlanejamento {
      * @description 
      * O planejamentos nunca pode alocar itens pro dia atual, sempre para dias na frente
      */
-    valide(fabrica: Fabrica, pedido: Pedido, planejamentosTemp: PlanejamentoTemporario[]): void {
+    valide(
+        fabrica: Fabrica,
+        pedido: Pedido,
+        planejamentosTemp: PlanejamentoTemporario[]
+    ): void {
         const [primeiroPlanejado] = planejamentosTemp.sort((a, b) => a.dia.getTime() - b.dia.getTime());
-        if(!primeiroPlanejado) return;
+        if (!primeiroPlanejado) return;
         if (isBefore(primeiroPlanejado.dia, startOfTomorrow())) {
             throw new ErroDeValidacao('Data do planejamento não pode ser anterior ao dia atual');
         }

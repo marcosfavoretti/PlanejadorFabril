@@ -57,19 +57,18 @@ export class AlocaPorBatelada
             ) : necessidade.dia;
 
             const datasParaProgramar = await this.gerenciadorPlan.diaParaAdiantarProducaoEncaixe(
-                props.fabrica, dataLimite, props.setor, props.pedido.item, precisoAlocar, new VerificaBatelada(this.numMaxBatelada), planejamentosTemporarios
+                dataLimite,
+                props.setor,
+                props.pedido.item,
+                precisoAlocar,
+                new VerificaBatelada(this.numMaxBatelada),
+                props.planejamentoFabril,
+                planejamentosTemporarios
             );
 
-            console.log(`datas para suprir ${datasParaProgramar}`)
-            const qtdMatriz: number[] = [];
 
-            for (const data of datasParaProgramar) {
-                const response = await this.gerenciadorPlan.possoAlocarQuantoNoDia(props.fabrica, data, props.setor, props.pedido.item, new VerificaBatelada(this.numMaxBatelada), planejamentosTemporarios);
-                qtdMatriz.push(response);
-            }
-
-            for (const [index, data] of datasParaProgramar.entries()) {
-                const possoAlocarNesseDia = qtdMatriz[index];
+            for (const [data, _qtd] of datasParaProgramar.entries()) {
+                const possoAlocarNesseDia = _qtd;
                 const qtdParaAlocar = Math.min(
                     restante,
                     necessidade.qtd,

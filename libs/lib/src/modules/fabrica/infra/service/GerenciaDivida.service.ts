@@ -41,6 +41,7 @@ export class GerenciaDividaService
         try {
             // TODO IMPROVE: para tentar deixar menos custoso isso
             const dividas = await this.calculoDivida.calc(props);
+            
             await this.dividaService.removerDividaNaFabricaDoPedido(props.fabrica, props.pedido);
             
             const dividasParaAlterar: Divida[] = [];

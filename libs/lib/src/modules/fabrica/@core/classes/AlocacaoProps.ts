@@ -7,5 +7,12 @@ export type AlocacaoProps = {
     fabrica: Fabrica,
     pedido: Pedido,
     estrutura: ItemEstruturado,
-    planBase?: PlanejamentoTemporario[]
+    /**
+     * @description planejamento fabril corrente na fabrica. Ele deve conter todos os planejamentos para serem validados
+     */
+    planejamentoFabril: PlanejamentoTemporario[];
+    /**
+     * @description serve para adicionar contexto de alguma planejamento que ja foi feito. Por exemplo para planejar as dependencias eu passo o planejamento base do Rops da estrutura
+     */
+    planBase?: PlanejamentoTemporario[];
 }

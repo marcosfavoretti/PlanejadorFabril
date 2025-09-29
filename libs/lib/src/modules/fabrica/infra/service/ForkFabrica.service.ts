@@ -1,5 +1,4 @@
 import { Inject, Logger } from "@nestjs/common";
-import { ConsultaPlanejamentoService } from "./ConsultaPlanejamentos.service";
 import { Fabrica } from "../../@core/entities/Fabrica.entity";
 import { ForkFabricaProps } from "../../@core/classes/ForkFabricaProps";
 import { IGeraCheckPoint } from "../../@core/interfaces/IGeraCheckPoint";
@@ -29,7 +28,7 @@ export class ForkFabricaService {
      */
     private async aplicarCheckpointSeNecessario(fabricaAtual: Fabrica, props: ForkFabricaProps): Promise<void> {
         const ancestrais = await this.fabricaService.consultarFabricasAteCheckPoint(props.fabrica);
-        if (props.isPrincipal && ancestrais.length === this.CHECKPOINT_RANGE) {
+        if (props.forceCheckPoint || (props.isPrincipal && ancestrais.length === this.CHECKPOINT_RANGE)) {
             this.logger.log('CRIANDO CHECKPOINT PARA FABRICA ✨', 'FORK SERVICE');
             fabricaAtual.enableCheckPoint();
             for (const checkpoint of this.checkpoints_services) {

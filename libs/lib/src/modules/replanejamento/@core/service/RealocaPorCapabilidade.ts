@@ -5,14 +5,12 @@ import { IGerenciadorPlanejamentConsulta } from "@libs/lib/modules/fabrica/@core
 import { CODIGOSETOR } from "@libs/lib/modules/planejamento/@core/enum/CodigoSetor.enum";
 import {
     addBusinessDays,
-    isAfter,
     isBefore,
     isEqual,
     isSameDay,
     subBusinessDays,
 } from "date-fns";
 import { RealocacaoParcial } from "@libs/lib/modules/planejamento/@core/classes/RealocacaoParcial";
-import { Calendario } from "@libs/lib/modules/shared/@core/classes/Calendario";
 import { VerificaCapabilidade } from "@libs/lib/modules/fabrica/@core/classes/VerificaCapabilidade";
 import { ISelecionarItem } from "@libs/lib/modules/item/@core/interfaces/ISelecionarItem";
 import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
@@ -24,27 +22,6 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
     ) {
         super(gerenciador, selecionarItem);
     }
-
-    /**
-     * @param planejamentosDoPedido
-     * @param dataEstopim
-     * @param setor
-     * @description filtra os planejamentos do setor em questao em que a data de estopim é maior ou igual
-     * @returns
-     */
-    private planejamentosDoSetor(
-        planejamentosDoPedido: PlanejamentoTemporario[],
-        dataEstopim: Date,
-        setor: CODIGOSETOR,
-    ): PlanejamentoTemporario[] {
-        return planejamentosDoPedido
-            .filter((p) =>
-                p.setor === setor &&
-                (isAfter(p.dia, dataEstopim) || isSameDay(p.dia, dataEstopim))
-            )
-            .sort((a, b) => a.dia.getTime() - b.dia.getTime());
-    }
-
 
     protected async realocacao(
         props: RealocacaoSemDependenciaProps
@@ -60,7 +37,6 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
             let totalParaRealocar = planejamento.qtd;
 
             if (totalParaRealocar <= 0) {
-
                 break; // passa para o próximo setor na chain
             }
 
@@ -69,12 +45,12 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
             //mesmo que usuario queira eu nao deixo ele realocar em cima de capabilidade altas
             const datasParaAlocar = await this.gerenciadorPlan
                 .diaParaAdiarProducaoEncaixe(
-                    props.fabrica,
                     novaData,
                     props.setor,
                     planejamento.item,
                     totalParaRealocar,
                     new VerificaCapabilidade(props.pedido.item, props.setor),
+                    props.planejamentoFabril,
                     resultado.adicionado,
                 );
 
@@ -83,23 +59,14 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
             //     qtdAlocada = Math.min(totalParaRealocar, capacidade);
             // }
 
-            const qtdAlocacaoMatrix = await Promise.all(
-                datasParaAlocar.map(
-                    (data) =>
-                        this.gerenciadorPlan.possoAlocarQuantoNoDia(
-                            props.fabrica,
-                            data,
-                            props.setor,
-                            planejamento.item,
-                            new VerificaCapabilidade(props.pedido.item, props.setor),
-                            resultado.adicionado,
-                        ),
-                ),
-            );
-
-            for (const [idx, dataParaAlocar] of datasParaAlocar.entries()) {
-                const qtd = Math.min(
-                    qtdAlocacaoMatrix[idx],
+            for (const [dataParaAlocar, _qtd] of datasParaAlocar.entries()) {
+                console.log('debug',
+                    _qtd,
+                    totalParaRealocar,
+                    planejamento.pedido.item.capabilidade(props.setor),
+                )
+                const qtdAlocada = Math.min(
+                    _qtd,
                     totalParaRealocar,
                     planejamento.pedido.item.capabilidade(props.setor),
                 );
@@ -108,11 +75,11 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
                     planejamentoSnapShotId: undefined,
                     item: props.itemContext,
                     dia: dataParaAlocar,
-                    qtd: qtd,
+                    qtd: qtdAlocada,
                 };
                 resultado.retirado.push(planejamento);
                 resultado.adicionado.push(planejamentoNovo);
-                totalParaRealocar -= qtd;
+                totalParaRealocar -= qtdAlocada;
             }
         }
 
@@ -159,8 +126,8 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
          * seleciona so os planejamentos do setor atual
         */
         const ultimoSetor = props.realocacaoUltSetor.adicionado[0].setor;
-        
-        const planejamentosDoSetorAtual = 
+
+        const planejamentosDoSetorAtual =
             props.planDoPedido.filter(plan => plan.setor === props.setor).sort((a, b) => (a.dia.getTime() - b.dia.getTime()));
 
         /**
@@ -175,7 +142,7 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
                 plan => plan.setor === ultimoSetor &&
                     !props.realocacaoUltSetor.retirado.some(r => isSameDay(r.dia, plan.dia))
             )
-            .concat(props.realocacaoUltSetor.adicionado)
+                .concat(props.realocacaoUltSetor.adicionado)
 
         console.log(props.realocacaoUltSetor.retirado.map(a => a.dia));
 
@@ -223,12 +190,12 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
 
             const datasParaAlocar = await this.gerenciadorPlan
                 .diaParaAdiarProducaoEncaixe(
-                    props.fabrica,
                     novaData,
                     props.setor,
                     planejamentoModificado.item,
                     totalParaRealocar,
                     new VerificaCapabilidade(props.pedido.item, props.setor),
+                    props.planejamentoFabril,
                     realocacaoParcial.adicionado,
                 );
 
@@ -237,23 +204,15 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
             //     qtdAlocada = Math.min(totalParaRealocar, capacidade);
             // }
 
-            const qtdAlocacaoMatrix = await Promise.all(
-                datasParaAlocar.map(
-                    (data) =>
-                        this.gerenciadorPlan.possoAlocarQuantoNoDia(
-                            props.fabrica,
-                            data,
-                            props.setor,
-                            planejamentoModificado.item,
-                            new VerificaCapabilidade(props.pedido.item, props.setor),
-                            realocacaoParcial.adicionado,
-                        ),
-                ),
-            );
 
-            for (const [idx, dataParaAlocar] of datasParaAlocar.entries()) {
-                const qtd = Math.min(
-                    qtdAlocacaoMatrix[idx],
+            for (const [dataParaAlocar, _qtd] of datasParaAlocar.entries()) {
+                console.log(
+                    _qtd,
+                    totalParaRealocar,
+                    planejamentoModificado.pedido.item.capabilidade(props.setor),
+                )
+                const qtdAlocada = Math.min(
+                    _qtd,
                     totalParaRealocar,
                     planejamentoModificado.pedido.item.capabilidade(props.setor),
                 );
@@ -262,10 +221,10 @@ export class RealocaPorCapabilidade extends MetodoDeReAlocacao {
                     planejamentoSnapShotId: undefined,
                     item: props.itemContext,
                     dia: dataParaAlocar,
-                    qtd: qtd,
+                    qtd: qtdAlocada,
                 };
                 realocacaoParcial.adicionado.push(planejamentoNovo);
-                totalParaRealocar -= qtd;
+                totalParaRealocar -= qtdAlocada;
             }
         }
         console.debug(`====================================================`);

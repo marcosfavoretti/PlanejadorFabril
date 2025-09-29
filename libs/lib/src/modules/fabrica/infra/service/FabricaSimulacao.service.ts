@@ -40,12 +40,15 @@ export class FabricaSimulacaoService {
 
     async planejamento(fabrica: Fabrica, pedido: Pedido): Promise<FabricaPlanejamentoResultado> {
         const planejamentosTemporarios: PlanejamentoTemporario[] = [];
-
         try {
             const estrutura = await this.montaEstruturaEstrategia.monteEstrutura(pedido.item);
 
+            const planejamentoCorrente = await this.consultaPlanejamentoService.consultaPlanejamentoAtual(fabrica, new PlanejamentoOverWriteByPedidoService());
+
+            const planejamentoCorrenteTemp = planejamentoCorrente.map(PlanejamentoTemporario.createByEntity);
+
             // 1. Planejamento principal (já retorna o pipe também)
-            const { planInicial, pipePrincipal } = await this.alocaItemPrincipal(fabrica, pedido, estrutura);
+            const { planInicial, pipePrincipal } = await this.alocaItemPrincipal(fabrica, pedido, estrutura, planejamentoCorrenteTemp);
 
             planejamentosTemporarios.push(...planInicial);
 
@@ -59,6 +62,7 @@ export class FabricaSimulacaoService {
                     itemEstruct: estrutura,
                     pipeProducao: pipePrincipal,
                     planPivot: pivot,
+                    planejamentoFabril: planejamentoCorrenteTemp,
                     planOriginal: planInicial
                 });
                 planejamentosTemporarios.splice(0, planejamentosTemporarios.length, ...planoAjustado);
@@ -66,10 +70,9 @@ export class FabricaSimulacaoService {
 
             // 3. Dependências
             if (estrutura.itensDependencia.length > 0) {
-                const plansDeps = await this.alocaDependencias(fabrica, pedido, estrutura, planejamentosTemporarios);
+                const plansDeps = await this.alocaDependencias(fabrica, pedido, estrutura, planejamentoCorrenteTemp, planejamentosTemporarios);
                 planejamentosTemporarios.push(...plansDeps);
             }
-
             return { planejamentos: planejamentosTemporarios };
         }
         catch (error) {
@@ -88,11 +91,11 @@ export class FabricaSimulacaoService {
     private async alocaItemPrincipal(
         fabrica: Fabrica,
         pedido: Pedido,
-        estrutura: any
+        estrutura: ItemEstruturado,
+        planejamentoCorrente: PlanejamentoTemporario[]
     ): Promise<{ planInicial: PlanejamentoTemporario[], pipePrincipal: SetorService }> {
-        const pipe = await this.gerarPipeDeProducao(estrutura)
-
-        const { acumulado } = await pipe.alocar({ fabrica, pedido, estrutura });
+        const pipe = await this.gerarPipeDeProducao(estrutura);
+        const { acumulado } = await pipe.alocar({ fabrica, pedido, estrutura, planejamentoFabril: planejamentoCorrente });
         return { planInicial: acumulado, pipePrincipal: pipe };
     }
 
@@ -109,6 +112,7 @@ export class FabricaSimulacaoService {
         fabrica: Fabrica,
         pedido: Pedido,
         estrutura: any,
+        planejamentoCorrente: PlanejamentoTemporario[],
         planejamentosTemporarios: PlanejamentoTemporario[]
     ): Promise<PlanejamentoTemporario[]> {
         const acumulados: PlanejamentoTemporario[] = [];
@@ -130,6 +134,7 @@ export class FabricaSimulacaoService {
                 fabrica,
                 pedido,
                 estrutura,
+                planejamentoFabril: planejamentoCorrente,
                 planBase: planejamentosTemporarios
             });
 
@@ -161,6 +166,10 @@ export class FabricaSimulacaoService {
             this.consultaRoteiro.roteiro(props.estrutura.itemFinal)
         ])
 
+        const planejamentoCorrente = await this.consultaPlanejamentoService.consultaPlanejamentoAtual(props.fabrica, new PlanejamentoOverWriteByPedidoService());
+
+        const planejamentoCorrenteTemp = planejamentoCorrente.map(PlanejamentoTemporario.createByEntity);
+
         const roteiroCompleto = roteiro//.concat(roteiroItemFinal); TODO adicionar o item final aqui para caso as dependencias tambem nao tiverem sido feitas ate a data ele replanejar o produto 000
 
         const pipeProducao = this.setorChainFactoryService.modificarCorrente(roteiroCompleto);
@@ -180,6 +189,7 @@ export class FabricaSimulacaoService {
                 novoDia: props.novaData || startOfTomorrow(),
                 pedido: props.planejamentoFalho.pedido,
                 planDoPedido: planejamentosDependentes,
+                planejamentoFabril: planejamentoCorrenteTemp,
                 planFalho: props.planejamentoFalho,
             }
         );
@@ -203,9 +213,13 @@ export class FabricaSimulacaoService {
 
                 const estrutura = await this.montaEstruturaEstrategia.monteEstrutura(realocacao.pedido.item);
 
+                const planejamentoCorrente = await this.consultaPlanejamentoService.consultaPlanejamentoAtual(fabrica, new PlanejamentoOverWriteByPedidoService());
+
+                const planejamentoCorrenteTemp = planejamentoCorrente.map(PlanejamentoTemporario.createByEntity);
+
                 console.log('estruct', estrutura);
 
-                if (estrutura.itensDependencia.map(i=>i.Item).includes(realocacao.item.Item)) {
+                if (estrutura.itensDependencia.map(i => i.Item).includes(realocacao.item.Item)) {
                     //sempre que for realocar uma dependencia eu entro aqui
                     const response = await this.replanejarDependencia({
                         fabrica,
@@ -235,6 +249,7 @@ export class FabricaSimulacaoService {
                         novoDia: novaData ? novaData : this.calendario.proximoDiaUtilReplanejamento(new Date()),
                         pedido: realocacao.pedido,
                         planFalho: realocacao,
+                        planejamentoFabril: planejamentoCorrenteTemp,
                         planDoPedido: planDoPedidoPrincipal.map(PlanejamentoTemporario.createByEntity),
                     }
                 );
@@ -256,7 +271,6 @@ export class FabricaSimulacaoService {
         }
     }
 
-
     private organizaPlansOrdemCronologica(planejamentos: PlanejamentoTemporario[], pipeSetores: SetorService): PlanejamentoTemporario[] {
         const planejamentosForaDoRangeASC = planejamentos
             .filter(p => p.setor === pipeSetores.getSetorCode())
@@ -276,6 +290,7 @@ export class FabricaSimulacaoService {
         itemEstruct: ItemEstruturado,
         planOriginal: PlanejamentoTemporario[],
         planPivot: PlanejamentoTemporario,
+        planejamentoFabril: PlanejamentoTemporario[],
         pipeProducao: SetorService
     }): Promise<PlanejamentoTemporario[]> {
         //
@@ -297,6 +312,7 @@ export class FabricaSimulacaoService {
                 estrutura: props.itemEstruct,
                 novoDia: this.calendario.proximoDiaUtilReplanejamento(props.planPivot.dia),
                 pedido: props.pedido,
+                planejamentoFabril: props.planejamentoFabril,
                 planDoPedido: props.planOriginal,
                 planFalho: props.planPivot,
             }

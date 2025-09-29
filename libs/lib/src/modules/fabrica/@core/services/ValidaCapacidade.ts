@@ -6,9 +6,12 @@ import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/cla
 import { Fabrica } from "../entities/Fabrica.entity";
 import { ErroDeValidacao } from "../exception/ErroDeValidacao.exception";
 import { IVerificaCapacidade } from "../interfaces/IVerificaCapacidade";
+import { ConsultaPlanejamentoService } from "../../infra/service/ConsultaPlanejamentos.service";
+import { PlanejamentoOverWriteByPedidoService } from "./PlanejamentoOverWriteByPedido.service";
 
 export class ValidaCapacidade implements IValidaPlanejamento {
     constructor(
+        @Inject(ConsultaPlanejamentoService) private consultaPlanejamento: ConsultaPlanejamentoService,
         @Inject(forwardRef(() => IGerenciadorPlanejamentConsulta)) private gerenciamentoConsulta: IGerenciadorPlanejamentConsulta
     ) { }
 
@@ -16,6 +19,7 @@ export class ValidaCapacidade implements IValidaPlanejamento {
 
     async valide(fabrica: Fabrica, pedido: Pedido, planejamentosTemp: PlanejamentoTemporario[]): Promise<void> {
         const tempMap = new Map<string, PlanejamentoTemporario[]>();
+        
         for (const p of planejamentosTemp) {
             const key = this.makeKey(p);
             const list = tempMap.get(key) ?? [];
@@ -23,17 +27,21 @@ export class ValidaCapacidade implements IValidaPlanejamento {
             tempMap.set(key, list);
         }
 
+        const planejamentoCorrente = await this.consultaPlanejamento.consultaPlanejamentoAtual(fabrica, new PlanejamentoOverWriteByPedidoService());
+
+        const planejamentoCorrenteTemp = planejamentoCorrente.map(PlanejamentoTemporario.createByEntity);
+
         for (const temp of planejamentosTemp) {
             const key = this.makeKey(temp);
             const listaTemp = tempMap.get(key) ?? [];
             const temporariosSemAtual = listaTemp.filter(p => p !== temp);
             const podeAlocar = await this.gerenciamentoConsulta.possoAlocarNoDia(
-                fabrica,
                 temp.dia,
                 temp.setor,
                 temp.item,
                 temp.qtd,
                 this.verificacao,
+                planejamentoCorrenteTemp,
                 temporariosSemAtual
             );
             if (!podeAlocar) {

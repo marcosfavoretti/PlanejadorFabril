@@ -46,6 +46,7 @@ export abstract class SetorService implements ISetorChain {
                 pedido: props.pedido,
                 planDoPedido: props.planDoPedido,
                 planFalho: props.planFalho,
+                planejamentoFabril: props.planejamentoFabril,
                 realocacaoUltSetor: props.realocacaoUltSetor
             }
         );

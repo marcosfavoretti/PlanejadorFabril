@@ -81,32 +81,18 @@ export class RealocaPedidoTodoService
 
             const datasParaAlocar = await this.gerenciadorPlan
                 .diaParaAdiarProducaoEncaixe(
-                    props.fabrica,
                     novaData,
                     props.setor,
                     planejamento.item,
                     totalParaRealocar,
                     new VerificaCapabilidade(props.pedido.item, props.setor),
+                    props.planejamentoFabril,
                     resultado.adicionado,
                 );
 
-            const qtdAlocacaoMatrix = await Promise.all(
-                datasParaAlocar.map(
-                    (data) =>
-                        this.gerenciadorPlan.possoAlocarQuantoNoDia(
-                            props.fabrica,
-                            data,
-                            props.setor,
-                            planejamento.item,
-                            new VerificaCapabilidade(props.pedido.item, props.setor),
-                            resultado.adicionado,
-                        ),
-                ),
-            );
-
-            for (const [idx, dataParaAlocar] of datasParaAlocar.entries()) {
+            for (const [dataParaAlocar, _qtd] of datasParaAlocar.entries()) {
                 const qtd = Math.min(
-                    qtdAlocacaoMatrix[idx],
+                    _qtd,
                     totalParaRealocar,
                     planejamento.pedido.item.capabilidade(props.setor),
                 );

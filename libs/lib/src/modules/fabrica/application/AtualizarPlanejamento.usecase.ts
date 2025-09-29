@@ -12,7 +12,7 @@ import { GerenciaDividaService } from "../infra/service/GerenciaDivida.service";
 import { FabricaSimulacaoService } from "../infra/service/FabricaSimulacao.service";
 import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/classes/PlanejamentoTemporario";
 import { IGerenciadorPlanejamentoMutation } from "../@core/interfaces/IGerenciadorPlanejamento";
-import { isSameDay } from "date-fns";
+import { isBefore, isSameDay } from "date-fns";
 import { Pedido } from "../../pedido/@core/entities/Pedido.entity";
 export class AtualizarPlanejamentoUseCase {
 
@@ -40,14 +40,21 @@ export class AtualizarPlanejamentoUseCase {
 
             const planejamentoTemporario = PlanejamentoTemporario.createByEntity(planejamentoSnapShotAlvo);
 
-            if (dto.qtd !== undefined && !Number.isNaN(dto.qtd)) planejamentoTemporario.qtd = dto.qtd;
-
-            if (!isSameDay(dto.dia, planejamento.dia)) {
-                await this.replanejarDia(fabrica, planejamento.pedido, planejamentoTemporario, dto.dia);
-                planejamentoTemporario.dia = dto.dia;
+            if (dto.qtd !== undefined && !Number.isNaN(dto.qtd)) {
+                planejamentoTemporario.qtd = dto.qtd;
+                await this.substituirPlanejamento(fabrica, planejamentoSnapShotAlvo, planejamentoTemporario);
             }
 
-            await this.substituirPlanejamento(fabrica, planejamentoSnapShotAlvo, planejamentoTemporario);
+            if (!isSameDay(dto.dia, planejamento.dia)) {
+                if (isBefore(dto.dia, planejamento.dia)) {
+                    planejamentoTemporario.dia = dto.dia;
+                    await this.substituirPlanejamento(fabrica, planejamentoSnapShotAlvo, planejamentoTemporario);
+                }
+                else{
+                    await this.replanejarDia(fabrica, planejamento.pedido, planejamentoTemporario, dto.dia);
+                }
+            }
+
             await this.calcularEResolverDividas(fabrica, planejamento.pedido);
         }
         catch (error) {
@@ -71,6 +78,7 @@ export class AtualizarPlanejamentoUseCase {
         );
 
         await this.gerenciadorPlanejado.appendPlanejamento(fabrica, pedido, resultadoReplanejamento.planejamentos);
+
 
         const snapShotParaRemover: number[] = resultadoReplanejamento.retirado
             .map(r => r.planejamentoSnapShotId)
@@ -96,11 +104,12 @@ export class AtualizarPlanejamentoUseCase {
     ) {
         // const planejamentos = await this.consultaPlanejamentoService.consultaPlanejamentoAtual(fabrica, new PlanejamentoOverWriteByPedidoService());
         const planejamentos = await this.consultaPlanejamentoService.consultaPlanejamentoDoPedidoAteFabrica(fabrica, pedido);
-        
-        console.log(planejamentos);
 
         const allPlanejamentosAsTemporario = planejamentos.map(p =>
             PlanejamentoTemporario.createByEntity(p));
+
+        console.log('olhe')
+        console.log(allPlanejamentosAsTemporario.map(a=>`${a.dia} ${a.qtd} ${a.setor}`))
 
         const dividas = await this.gerenciaDividaService.resolverDividas({
             fabrica,

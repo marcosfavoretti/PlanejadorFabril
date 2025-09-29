@@ -5,7 +5,6 @@ import { IGerenciadorPlanejamentConsulta } from "@libs/lib/modules/fabrica/@core
 import { CODIGOSETOR } from "@libs/lib/modules/planejamento/@core/enum/CodigoSetor.enum";
 import {
     addBusinessDays,
-    isAfter,
     isBefore,
     isEqual,
     isSameDay,
@@ -13,7 +12,6 @@ import {
 } from "date-fns";
 import { RealocacaoParcial } from "@libs/lib/modules/planejamento/@core/classes/RealocacaoParcial";
 import { Calendario } from "@libs/lib/modules/shared/@core/classes/Calendario";
-import { VerificaCapabilidade } from "@libs/lib/modules/fabrica/@core/classes/VerificaCapabilidade";
 import { ISelecionarItem } from "@libs/lib/modules/item/@core/interfaces/ISelecionarItem";
 import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
 import { VerificaBatelada } from "@libs/lib/modules/fabrica/@core/classes/VerificaBatelada";
@@ -31,27 +29,6 @@ export class RealocaPorBateladaService
 
     logger = new Logger();
     protected calendario: Calendario;
-
-    /**
-     * @param planejamentosDoPedido
-     * @param dataEstopim
-     * @param setor
-     * @description filtra os planejamentos do setor em questao em que a data de estopim é maior ou igual
-     * @returns
-     */
-    private planejamentosDoSetor(
-        planejamentosDoPedido: PlanejamentoTemporario[],
-        dataEstopim: Date,
-        setor: CODIGOSETOR,
-    ): PlanejamentoTemporario[] {
-        return planejamentosDoPedido
-            .filter((p) =>
-                p.setor === setor &&
-                (isAfter(p.dia, dataEstopim) || isSameDay(p.dia, dataEstopim))
-            )
-            .sort((a, b) => a.dia.getTime() - b.dia.getTime());
-    }
-
 
     protected async realocacao(
         props: RealocacaoSemDependenciaProps
@@ -73,15 +50,15 @@ export class RealocaPorBateladaService
 
             let novaData = props.novoDia;
 
-            //mesmo que usuario queira eu nao deixo ele realocar em cima de capabilidade altas
+            //mesmo que usuario queira eu nao deixo ele realocar em cima de bateladas altas
             const datasParaAlocar = await this.gerenciadorPlan
                 .diaParaAdiarProducaoEncaixe(
-                    props.fabrica,
                     novaData,
                     props.setor,
                     planejamento.item,
                     totalParaRealocar,
-                    new VerificaCapabilidade(props.pedido.item, props.setor),
+                    new VerificaBatelada(this.numMaxBatelada),
+                    props.planejamentoFabril,
                     resultado.adicionado,
                 );
 
@@ -90,25 +67,12 @@ export class RealocaPorBateladaService
             //     qtdAlocada = Math.min(totalParaRealocar, capacidade);
             // }
 
-            const qtdAlocacaoMatrix = await Promise.all(
-                datasParaAlocar.map(
-                    (data) =>
-                        this.gerenciadorPlan.possoAlocarQuantoNoDia(
-                            props.fabrica,
-                            data,
-                            props.setor,
-                            planejamento.item,
-                            new VerificaCapabilidade(props.pedido.item, props.setor),
-                            resultado.adicionado,
-                        ),
-                ),
-            );
 
-            for (const [idx, dataParaAlocar] of datasParaAlocar.entries()) {
+            for (const [dataParaAlocar, _qtd] of datasParaAlocar.entries()) {
+                
                 const qtd = Math.min(
-                    qtdAlocacaoMatrix[idx],
+                    _qtd,
                     totalParaRealocar,
-                    planejamento.pedido.item.capabilidade(props.setor),
                 );
                 const planejamentoNovo: PlanejamentoTemporario = {
                     ...planejamento,
@@ -230,12 +194,12 @@ export class RealocaPorBateladaService
 
             const datasParaAlocar = await this.gerenciadorPlan
                 .diaParaAdiarProducaoEncaixe(
-                    props.fabrica,
                     novaData,
                     props.setor,
                     planejamentoModificado.item,
                     totalParaRealocar,
                     new VerificaBatelada(this.numMaxBatelada),
+                    props.planejamentoFabril,
                     realocacaoParcial.adicionado,
                 );
 
@@ -244,25 +208,11 @@ export class RealocaPorBateladaService
             //     qtdAlocada = Math.min(totalParaRealocar, capacidade);
             // }
 
-            const qtdAlocacaoMatrix = await Promise.all(
-                datasParaAlocar.map(
-                    (data) =>
-                        this.gerenciadorPlan.possoAlocarQuantoNoDia(
-                            props.fabrica,
-                            data,
-                            props.setor,
-                            planejamentoModificado.item,
-                            new VerificaBatelada(this.numMaxBatelada),
-                            realocacaoParcial.adicionado,
-                        ),
-                ),
-            );
 
-            for (const [idx, dataParaAlocar] of datasParaAlocar.entries()) {
+            for (const [dataParaAlocar, _qtd] of datasParaAlocar.entries()) {
                 const qtd = Math.min(
-                    qtdAlocacaoMatrix[idx],
+                    _qtd,
                     totalParaRealocar,
-                    planejamentoModificado.pedido.item.capabilidade(props.setor),
                 );
                 const planejamentoNovo: PlanejamentoTemporario = {
                     ...planejamentoModificado,
