@@ -53,27 +53,30 @@ export class PlanejarPedidoUseCase {
                 //requisao para alocacao do pedido
                 const { planejamentos: planejamentosTemporarios } = await this.fabricaSimulacaoService.planejamento(fabricaPrincipal, pedido);
                 //
-                //criacao efetiva de uma nova fabrica para versionar todos esse planejados
                 if (!fabricaVersionada) {
-                    fabricaVersionada = await this.fabricaService.saveFabrica(fabricaNovaParaMudanca);
+                    fabricaVersionada = await this.fabricaService.transitionSave(fabricaNovaParaMudanca);
                 }
                 //
-                //rodar dividas | salvamento da tabela vai ser feito em outro servico apenas na hora de avaliar a producao diaria
                 const dividas = await this.gerenciaDividaService.resolverDividas({
                     fabrica: fabricaVersionada,
                     pedido,
                     planejamentos: planejamentosTemporarios
                 });
-                await this.gerenciaDividaService.adicionaDividas(fabricaVersionada, dividas);
+                
+                await this.gerenciaDividaService.adicionaDividas(
+                    fabricaVersionada,
+                    dividas);
                 //
+
                 //salvamento do pedido
                 const planejamentos = await this.gerenciadorPlanejamentoMutation.appendPlanejamento(fabricaVersionada, pedido, planejamentosTemporarios);
-                
+
                 //
                 //roda eventos de pos planejamentos
                 const promises = this.onNovoPlanejamento.map(on =>
                     on.execute(fabricaVersionada!, planejamentos)
                 );
+
                 await Promise.all(promises);
                 //
                 pedido.processaPedido();

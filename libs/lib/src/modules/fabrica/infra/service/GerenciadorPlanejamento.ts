@@ -97,26 +97,32 @@ export class GerenciadorPlanejamento implements
         pedido: Pedido,
         planejamentosTemp: PlanejamentoTemporario[]
     ): Promise<Planejamento[]> {
-        await this.planejamentoValidatorExecutor
-            .execute(fabrica, pedido, planejamentosTemp);
-        const noBancoAtual = await this.consultaPlanejamentoService.consultaPlanejamentoAtual(
-            fabrica,
-            new PlanejamentoOverWriteByPedidoService()
-        );
-        for (const planejamentoTemp of planejamentosTemp) {
-            const planejamentosSemelhantes = noBancoAtual.filter(
-                bd => 
-                    isSameDay(bd.planejamento.dia, planejamentoTemp.dia) &&
-                    bd.planejamento.item.getCodigo() === planejamentoTemp.item.getCodigo() &&
-                    bd.planejamento.setor.codigo === planejamentoTemp.setor &&
-                    bd.planejamento.pedido.id === planejamentoTemp.pedido.id
-            ).reduce(
-                (total, planSnapShot) => total += planSnapShot.planejamento.qtd, 0
+        try {
+            console.log(fabrica)
+            await this.planejamentoValidatorExecutor
+                .execute(fabrica, pedido, planejamentosTemp);
+            const noBancoAtual = await this.consultaPlanejamentoService.consultaPlanejamentoAtual(
+                fabrica,
+                new PlanejamentoOverWriteByPedidoService()
             );
-            planejamentoTemp.qtd = planejamentosSemelhantes + planejamentoTemp.qtd;
-        }//CONCATENA DOIS PLANEJADOS DO MESMO PEDIDO NO MESMO DIA
-        const resultados = await this.efetivaPlanejamentoService.efetiva(fabrica, planejamentosTemp);
-        return resultados.flatMap(plan => plan.planejamento);
+            for (const planejamentoTemp of planejamentosTemp) {
+                const planejamentosSemelhantes = noBancoAtual.filter(
+                    bd =>
+                        isSameDay(bd.planejamento.dia, planejamentoTemp.dia) &&
+                        bd.planejamento.item.getCodigo() === planejamentoTemp.item.getCodigo() &&
+                        bd.planejamento.setor.codigo === planejamentoTemp.setor &&
+                        bd.planejamento.pedido.id === planejamentoTemp.pedido.id
+                ).reduce(
+                    (total, planSnapShot) => total += planSnapShot.planejamento.qtd, 0
+                );
+                planejamentoTemp.qtd = planejamentosSemelhantes + planejamentoTemp.qtd;
+            }//CONCATENA DOIS PLANEJADOS DO MESMO PEDIDO NO MESMO DIA
+            const resultados = await this.efetivaPlanejamentoService.efetiva(fabrica, planejamentosTemp);
+            return resultados.flatMap(plan => plan.planejamento);
+        } catch (error) {
+            Logger.error(error, GerenciadorPlanejamento.name)
+            throw error;
+        }
     }
 
     async diaParaAdiarProducaoEncaixe(

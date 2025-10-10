@@ -19,7 +19,6 @@ import { PlanejamentoWorker } from "./application/Planejamento.worker";
     ],
     providers: [
         PlanejamentoWorker
-
     ],
     exports: [
     ],

@@ -9,8 +9,8 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "start:dev:pedido": "nest start --watch importa-pedido",
-    "start:dev:worker": "nest start --watch planeja-worker",
+    "start:dev:importa": "nest start --watch --debug importa-pedido",
+    "start:dev:worker": "nest start --watch --debug planeja-worker",
     "start:dev:api": "nest start --watch",
     "start:dev:env": "concurrently \"npm:start:dev:api\" \"npm:start:dev:worker\" \"npm:start:dev:pedido\" --prefix-colors cyan.bold,yellow.bold,green.bold",
     "dev-api": "nest start --watch planejamento-ethos",

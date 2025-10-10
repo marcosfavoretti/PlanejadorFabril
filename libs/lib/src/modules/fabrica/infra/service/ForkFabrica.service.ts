@@ -12,10 +12,12 @@ export class ForkFabricaService {
     constructor(
         @Inject(FabricaService) private fabricaService: FabricaService,
         @Inject('CHECKPOINT_SERVICES') private checkpoints_services: Array<IGeraCheckPoint>
-    ) { }
+    ) {
+        Logger.debug(`CHECKPOINT EACH ${this.CHECKPOINT_RANGE}`);
+    }
 
     async fork(props: ForkFabricaProps): Promise<Fabrica> {
-        const fabricaCopy = props.fabrica.copy(props.user, props.isPrincipal);
+        const fabricaCopy = props.fabrica.copy({ user: props.user, isPrincipal: props.isPrincipal });
         await this.aplicarCheckpointSeNecessario(fabricaCopy, props);
         return fabricaCopy;
     }
@@ -28,7 +30,7 @@ export class ForkFabricaService {
      */
     private async aplicarCheckpointSeNecessario(fabricaAtual: Fabrica, props: ForkFabricaProps): Promise<void> {
         const ancestrais = await this.fabricaService.consultarFabricasAteCheckPoint(props.fabrica);
-        if (props.forceCheckPoint || (props.isPrincipal && ancestrais.length === this.CHECKPOINT_RANGE)) {
+        if (props.forceCheckPoint || (props.isPrincipal && ancestrais.length >= this.CHECKPOINT_RANGE)) {
             this.logger.log('CRIANDO CHECKPOINT PARA FABRICA ✨', 'FORK SERVICE');
             fabricaAtual.enableCheckPoint();
             for (const checkpoint of this.checkpoints_services) {

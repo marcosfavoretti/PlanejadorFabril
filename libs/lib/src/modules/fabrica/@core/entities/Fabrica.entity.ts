@@ -79,12 +79,12 @@ export class Fabrica {
         return nova;
     }
 
-    copy(user: User, isPrincipal: boolean): Fabrica {
+    copy(props:{user: User, isPrincipal: boolean}): Fabrica {
         return new FabricaBuilder()
             .checkPoint(false)
-            .principal(isPrincipal)
+            .principal(props.isPrincipal)
             .fabricaPai(this)
-            .userId(user)
+            .userId(props.user)
             .build()
     }
 }

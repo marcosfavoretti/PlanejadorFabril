@@ -2,10 +2,16 @@ import { Inject } from "@nestjs/common";
 import { FabricaRepository } from "../repository/Fabrica.repository";
 import { Fabrica } from "../../@core/entities/Fabrica.entity";
 import { User } from "@libs/lib/modules/user/@core/entities/User.entity";
+import { InjectDataSource } from "@nestjs/typeorm";
+import { DataSource } from "typeorm";
+import { PlanejamentoSnapShot } from "../../@core/entities/PlanejamentoSnapShot.entity";
+import { DividaSnapShot } from "../../@core/entities/DividaSnapShot.entity";
+import { MercadoSnapShot } from "../../@core/entities/MercadoSnapShot.entity";
 
 export class FabricaService {
     constructor(
-        @Inject(FabricaRepository) private fabricaRepository: FabricaRepository
+        @Inject(FabricaRepository) private fabricaRepository: FabricaRepository,
+        @InjectDataSource() private dataSource: DataSource
     ) { }
 
     async saveFabrica(fabrica: Fabrica): Promise<Fabrica> {
@@ -17,75 +23,139 @@ export class FabricaService {
         }
     }
 
-    async removerFabrica(fabrica: Fabrica): Promise<void> {
+    /**
+     * @description como em algumas fabricas o payload de salvamento vai ficar muito grande, esse metodo é um workaround para salvar granularmente as cascades
+     */
+    async transitionSave(fabrica: Fabrica): Promise<Fabrica> {
+        // Separe as relações do objeto principal
+        const planejamentos = fabrica.planejamentoSnapShots || [];
+        const dividas = fabrica.dividasSnapShots || [];
+        const mercados = fabrica.mercadoSnapShots || [];
+
+        fabrica.planejamentoSnapShots = [];
+        fabrica.dividasSnapShots = [];
+        fabrica.mercadoSnapShots = [];
+
+        // 1. Inicie o QueryRunner para controlar a transação
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
         try {
-            await this.fabricaRepository.softDelete({
-                fabricaId: fabrica.fabricaId
-            })
+            // 2. Salve a entidade 'Fabrica' principal primeiro
+            const fabricaSalva = await queryRunner.manager.save(fabrica);
+
+            // 3. Associe a fabrica salva às entidades filhas
+            planejamentos.forEach(p => p.fabrica = fabricaSalva);
+            dividas.forEach(d => d.fabrica = fabricaSalva);
+            mercados.forEach(m => m.fabrica = fabricaSalva);
+
+            // 4. Salve as relações em lotes (chunks) para evitar o erro de parâmetros
+            // O próprio .save() do manager dentro do queryRunner fará isso de forma eficiente.
+            // O chunk aqui é mais para o TypeORM não estourar a memória do Node.js
+            // A quebra em chamadas separadas é o que resolve o limite de parâmetros.
+            if (planejamentos.length > 0) {
+                await queryRunner.manager.save(PlanejamentoSnapShot, planejamentos, { chunk: 100 });
+            }
+            if (dividas.length > 0) {
+                await queryRunner.manager.save(DividaSnapShot, dividas, { chunk: 100 });
+            }
+            if (mercados.length > 0) {
+                // Supondo que a entidade seja MercadoSnapShot
+                await queryRunner.manager.save(MercadoSnapShot, mercados, { chunk: 100 });
+            }
+
+            // 5. Se tudo deu certo, comita a transação
+            await queryRunner.commitTransaction();
+
+            // Retorne a fábrica com suas relações para consistência
+            fabricaSalva.planejamentoSnapShots = planejamentos;
+            fabricaSalva.dividasSnapShots = dividas;
+            fabricaSalva.mercadoSnapShots = mercados;
+
+            return fabricaSalva;
+
         } catch (error) {
-            console.error(error);
-            throw error;
+            // 6. Se algo deu errado, desfaça tudo
+            await queryRunner.rollbackTransaction();
+            console.error('Erro ao salvar fábrica em transação, rollback executado:', error);
+            throw error; // Propague o erro
+        } finally {
+            // 7. Libere o queryRunner
+            await queryRunner.release();
         }
     }
+    
 
-    async consultarFabricasAteCheckPoint(fabrica: Fabrica, acumulado: Fabrica[] = []): Promise<Fabrica[]> {
-        try {
-            const fabricaAtual = await this.fabricaRepository.findOne({
-                where: { fabricaId: fabrica.fabricaId },
-                relations: ['fabricaPai'], // precisa garantir que o pai está carregado
-            });
+    async removerFabrica(fabrica: Fabrica): Promise < void> {
+    try {
+        await this.fabricaRepository.softDelete({
+            fabricaId: fabrica.fabricaId
+        })
+    } catch(error) {
+        console.error(error);
+        throw error;
+    }
+}
 
-            if (!fabricaAtual) {
-                throw new Error("Não achou o pai");
-            }
+    async consultarFabricasAteCheckPoint(fabrica: Fabrica, acumulado: Fabrica[] = []): Promise < Fabrica[] > {
+    try {
+        const fabricaAtual = await this.fabricaRepository.findOne({
+            where: { fabricaId: fabrica.fabricaId },
+            relations: ['fabricaPai'], // precisa garantir que o pai está carregado
+        });
+
+        if(!fabricaAtual) {
+            throw new Error("Não achou o pai");
+        }
 
             acumulado.push(fabricaAtual);
 
-            if (fabricaAtual.checkPoint || !fabricaAtual.fabricaPai) {
-                return acumulado;
-            }
+        if(fabricaAtual.checkPoint || !fabricaAtual.fabricaPai) {
+    return acumulado;
+}
 
-            return this.consultarFabricasAteCheckPoint(fabricaAtual.fabricaPai, acumulado);
+return this.consultarFabricasAteCheckPoint(fabricaAtual.fabricaPai, acumulado);
         } catch (error) {
-            console.error(error);
-            throw error;
-        }
+    console.error(error);
+    throw error;
+}
     }
 
-    async consultaFabricasDoUsuario(usuario: User): Promise<Fabrica[]> {
-        return await this.fabricaRepository.find({
-            where: {
-                user: {
-                    id: usuario.id
-                }
-            },
-            relations: {
-                user: true,
-                fabricaPai: true,
+    async consultaFabricasDoUsuario(usuario: User): Promise < Fabrica[] > {
+    return await this.fabricaRepository.find({
+        where: {
+            user: {
+                id: usuario.id
             }
-        });
-    }
+        },
+        relations: {
+            user: true,
+            fabricaPai: true,
+        }
+    });
+}
 
     // private checkFabricaCheckPoint(fabrica: Fabrica): Promise<number> {
     //     const fabricas = await this.
     // }
 
-    async consultaFabrica(fabricaId: string): Promise<Fabrica> {
-        return await this.fabricaRepository.findOneOrFail({
-            where: {
-                fabricaId: fabricaId
-            },
-            relations: {
-                fabricaPai: true,
-                user: true,
-                mercadoSnapShots: true
-            }
-        })
-    }
+    async consultaFabrica(fabricaId: string): Promise < Fabrica > {
+    return await this.fabricaRepository.findOneOrFail({
+        where: {
+            fabricaId: fabricaId
+        },
+        relations: {
+            fabricaPai: true,
+            user: true,
+            mercadoSnapShots: true
+        }
+    })
+}
 
-    createFabrica(fabrica: Partial<Fabrica>): Fabrica {
-        return this.fabricaRepository.create(fabrica);
-    }
+createFabrica(fabrica: Partial<Fabrica>): Fabrica {
+    return this.fabricaRepository.create(fabrica);
+}
 
     // async forkUltimaFabrica(autor: User, principal: boolean): Promise<Fabrica> {
     //     try {
@@ -104,25 +174,25 @@ export class FabricaService {
     //     }
     // }
 
-    async consultaFabricaPrincipal(): Promise<Fabrica | null> {
-        try {
-            const results = await this.fabricaRepository.find({
-                where: {
-                    principal: true
-                },
-                order: {
-                    date: 'DESC'
-                },
-                relations: {
-                    fabricaPai: true,
-                    user: true
-                },
-                take: 1,
-            });
-            return results.length > 0 ? results[0] : null;
-        } catch (error) {
-            console.error(error);
-            throw error;
-        }
+    async consultaFabricaPrincipal(): Promise < Fabrica | null > {
+    try {
+        const results = await this.fabricaRepository.find({
+            where: {
+                principal: true
+            },
+            order: {
+                date: 'DESC'
+            },
+            relations: {
+                fabricaPai: true,
+                user: true
+            },
+            take: 1,
+        });
+        return results.length > 0 ? results[0] : null;
+    } catch(error) {
+        console.error(error);
+        throw error;
     }
+}
 }
