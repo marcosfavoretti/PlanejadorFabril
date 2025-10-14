@@ -5,24 +5,25 @@ import { PedidoService } from "@libs/lib/modules/pedido/infra/service/Pedido.ser
 import { EmailService } from "@libs/lib/modules/shared/services/Email.service";
 import { ControlFile, FileService } from "@libs/lib/modules/shared/services/JobsFile.service";
 import { Inject, Logger, OnModuleInit } from "@nestjs/common";
-import { Cron, CronExpression } from "@nestjs/schedule";
-import { format } from "date-fns";
+import { Cron, CronExpression, Interval } from "@nestjs/schedule";
+import { format, startOfDay, startOfMonth, startOfToday } from "date-fns";
 import { Email } from "@libs/lib/modules/shared/@core/classes/Email";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";
+import { ItemService } from "@libs/lib/modules/item/infra/service/Item.service";
 
 export class ImportadorDePedidoJob implements OnModuleInit {
     private readonly logger = new Logger(ImportadorDePedidoJob.name);
 
     constructor(
         @Inject(PedidoService) private pedidoService: PedidoService,
+        @Inject(ItemService) private itemService: ItemService,
         @Inject(PedidoLogixDAO) private pedidoLogixDAO: PedidoLogixDAO,
         @Inject(EmailService) private emailService: EmailService,
         @InjectQueue('planejamento') private planejamentoQueue: Queue,
     ) { }
 
     onModuleInit() {
-        console.log('cara')
         this.planejamentoQueue.client.ping((err, res) => {
             if (err) throw new Error(err.message)
             console.log(res)
@@ -39,57 +40,58 @@ export class ImportadorDePedidoJob implements OnModuleInit {
         });
     }
 
-    @Cron(CronExpression.EVERY_10_SECONDS)
+    falhaNoSalvar: Partial<Pedido>[] = [];
+    falhaNoPlanejar: Pedido[] = [];
+
+    @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+    async resetBuffers() {
+        this.falhaNoPlanejar = []
+        this.falhaNoSalvar = []
+    }
+
+    @Interval(40_000)
     async import(): Promise<void> {
         this.logger.log('Iniciando job de importação 💨');
-
-        const falhaNoSalvar: Partial<Pedido>[] = [];
-        const falhaNoPlanejar: Pedido[] = [];
-
         try {
             const pedidosParaProcessar = await this.obterPedidosParaProcessar();
             this.logger.log(`Encontrados ${pedidosParaProcessar.length} pedidos para processar`);
 
-            const pedidosSalvos = await this.salvarPedidos(pedidosParaProcessar, falhaNoSalvar);
+            const pedidosSalvos = await this.salvarPedidos(pedidosParaProcessar, this.falhaNoSalvar);
             this.logger.debug(`Salvos ${pedidosSalvos.length} pedidos`);
 
-            await this.executarPlanejamento(pedidosSalvos, falhaNoPlanejar);
+            await this.executarPlanejamento(pedidosSalvos, this.falhaNoPlanejar);
         } catch (error) {
             this.logger.error('Erro inesperado no processo de importação', error.stack);
         } finally {
-            await this.enviarResumoDeFalhas(falhaNoSalvar, falhaNoPlanejar);
+            await this.enviarResumoDeFalhas(this.falhaNoSalvar, this.falhaNoPlanejar);
         }
 
         this.logger.log('Job finalizado 💨');
     }
 
     private async obterPedidosParaProcessar(): Promise<Partial<Pedido>[]> {
-        const file = await FileService.readFile(ControlFile.JOBS);
-        const ultimaSincronizacao = file.LASTSYNC ? new Date(file.LASTSYNC) : new Date();
 
-        const pedidosEncontrados = await this.pedidoLogixDAO.search(ultimaSincronizacao);
-
-        await FileService.writeFile(ControlFile.JOBS, {
-            LASTIMPORT: format(new Date(), 'yyyy-MM-dd HH:mm:ss'),
-        });
+        const pedidosEncontrados = await this.pedidoLogixDAO.search(startOfMonth(new Date()));
 
         return pedidosEncontrados.map(PedidoLogixDTO.toDomainEntity);
     }
 
     private async salvarPedidos(pedidos: Partial<Pedido>[], falhaNoSalvar: Partial<Pedido>[]): Promise<Pedido[]> {
         const pedidosSalvos: Pedido[] = [];
-
         for (const pedido of pedidos) {
+            if (this.falhaNoPlanejar.map(a => a.hash).includes(pedido.hash!) || this.falhaNoSalvar.map(a => a.hash).includes(pedido.hash!)) {
+                continue;
+            }
             try {
+                await this.itemService.consultarItem(pedido.item!.Item!);//se nao achar o item ele nao vai salvar
                 const result = await this.pedidoService.savePedido([pedido]);
                 pedidosSalvos.push(...result);
-            } catch (error) {
+            }
+            catch (error) {
                 falhaNoSalvar.push(pedido);
                 this.logger.warn(`Falha ao salvar pedido: ${pedido.id}`);
-                await FileService.appendErrorTxt(`ERRO NO ITEM ${JSON.stringify(pedido, null, 2)}: ${error}`);
             }
         }
-
         return pedidosSalvos;
     }
 
@@ -149,17 +151,16 @@ export class ImportadorDePedidoJob implements OnModuleInit {
                 <br><br>
                 <h2>Falha no planejamento</h2>
                 <ul>
-                    ${falhaNoPlanejar.map(p => `<li>pedidoId:${p.id} data:${format(p.getSafeDate(), 'dd/MM/yyyy')} item:${p.getItem().getCodigo()} desc:${p.getItem().getTipoItem()}</li>`).join('\n')}
+                    ${falhaNoPlanejar.map(p => `<li>pedidoId:${p.id} data:${format(p.getSafeDate(), 'dd/MM/yyyy')} item:${p.item.Item} desc:${p.item.Item}</li>`).join('\n')}
                 </ul>
                 <h2>Falha ao importar</h2>
                 <ul>
-                    ${falhaNoSalvar.map((p: Pedido) => `<li>${p.getItem().getCodigo()}-${p?.getItem()?.getTipoItem()}</li>`).join('\n')}
+                    ${falhaNoSalvar.map((p: Pedido) => `<li>${p.item.Item}</li>`).join('\n')}
                 </ul>
             `,
             subject: 'Erro ao processar pedidos',
             to: ['marcos.junior@ethos.ind.br'],
         });
-
         await this.emailService.send(email);
     }
 }

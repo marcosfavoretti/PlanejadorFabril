@@ -11,7 +11,6 @@ export class EmailService
     @EnriqueceHtml
     async send(email: Email): Promise<void> {
         try {
-            console.log(email)
             await EmailClient.post('/email', email.getProps);
         } catch (error) {
             console.error(error)

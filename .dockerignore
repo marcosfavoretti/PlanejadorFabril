@@ -1,5 +1,10 @@
+# Dependências e Builds
 node_modules
 dist
-build
+.vscode
 .git
-database*
+.gitignore
+npm-debug.log*
+
+test/
+coverage/

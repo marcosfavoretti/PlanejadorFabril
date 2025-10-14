@@ -8,22 +8,25 @@ import { TypeormDevConfigModule } from "@libs/lib/config/TypeormDevConfig.module
 import { PedidoLogixDAO } from "./infra/service/PedidosLogix.dao";
 import { BullModule } from "@nestjs/bull";
 import { typeormSynecoConfig } from "@libs/lib/config/TypeormSynecoConfig.module";
+import { planejamentoQueue } from "@libs/lib/modules/shared/@core/const/queue";
+import { ItemServiceModule } from "@libs/lib/modules/item/ItemService.module";
 
 @Module({
     imports: [
         ScheduleModule.forRoot(),
         PedidoServiceModule,
+        ItemServiceModule,
         TypeormDevConfigModule,
         FabricaModule,
         BullModule.forRoot({
             redis: {
-                host: '127.0.0.1', // nome do serviço do docker-compose
-                port: 6379,
+                host: process.env.REDIS_HOST, // nome do serviço do docker-compose
+                port: +process.env.REDIS_PORT!,
             },
         }), 
         BullModule
             .registerQueue({
-                name: 'planejamento'
+                name: planejamentoQueue
             }),
         typeormSynecoConfig([])
     ],

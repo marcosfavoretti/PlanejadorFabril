@@ -11,11 +11,24 @@ async function bootstrap() {
 
 
   const app = await NestFactory.create(AppModule);
+
+  // --- LÓGICA DE CORS DINÂMICA ---
+  const corsOriginsFromEnv = process.env.CORS_HOSTS;
+  let allowedOrigins: string[] = [];
+
+  if (corsOriginsFromEnv) {
+    allowedOrigins = corsOriginsFromEnv.split(',');
+    logger.log(`Origens CORS carregadas do .env: [${allowedOrigins.join(', ')}]`, 'CORS');
+  } else {
+    allowedOrigins = ['http://localhost:4200'];
+    logger.warn('Variável CORS_ORIGIN não encontrada no .env. Usando fallback seguro.', 'CORS');
+  }
+
+
   app.enableCors({
-    origin: ['http://localhost:4200', 'http://192.168.99.129:4200', '*'], // Altere conforme necessário
+    origin: allowedOrigins, 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
-
   });
 
   app.useGlobalPipes(new ValidationPipe({
@@ -35,6 +48,7 @@ async function bootstrap() {
     .setVersion('1.0')
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'XYZ')
     .build();
+
 
   const document = SwaggerModule.createDocument(app, config);
 

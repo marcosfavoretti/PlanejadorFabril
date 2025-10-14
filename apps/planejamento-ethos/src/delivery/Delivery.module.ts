@@ -20,6 +20,8 @@ import { DonoDaFabricaGuard } from "@libs/lib/modules/fabrica/@core/guard/dono-d
 import { FabricaServiceModule } from "@libs/lib/modules/fabrica/FabricaService.module";
 import { CargosModule } from "@libs/lib/modules/cargos/Cargos.module";
 import { CargoController } from "./controllers/Cargo.controller";
+import { HealthController } from "./controllers/Health.controller";
+import { TerminusModule } from "@nestjs/terminus";
 
 @Module({
     imports: [
@@ -32,6 +34,7 @@ import { CargoController } from "./controllers/Cargo.controller";
         ReplanejamentoModule,
         PedidoModule,
         ItemModule,
+        TerminusModule,
         //services para guards
         FabricaServiceModule,
     ],
@@ -39,6 +42,7 @@ import { CargoController } from "./controllers/Cargo.controller";
         DonoDaFabricaGuard,
     ],
     controllers: [
+        HealthController,
         ItemController,
         KPIController,
         PedidoController,

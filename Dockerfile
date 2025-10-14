@@ -1,24 +1,45 @@
-FROM node:22 AS builder
+# ------------------------------------
+# ETAPA 1: BUILDER (Compilação)
+# ------------------------------------
+FROM node:22.12.0-alpine AS builder
 
-WORKDIR /app
+ENV NODE_ENV development
+WORKDIR /usr/src/app
 
-COPY package*.json ./
+# Copia e instala todas as dependências
+COPY package.json package-lock.json ./
+RUN npm ci
 
-RUN npm install
-
+# Copia o restante do código do monorepo (apps/, libs/, configs)
 COPY . .
 
+# Compila todos os projetos do monorepo em NestJS
 RUN npm run build
 
-FROM node:22
+# ------------------------------------
+# ETAPA 2: PRODUCTION (Runtime Otimizado)
+# ------------------------------------
+# Usa uma imagem base Alpine para o runtime (leve)
+FROM node:22.12.0-alpine AS production
 
-WORKDIR /app
+ENV NODE_ENV production
+WORKDIR /usr/src/app
 
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
+RUN apk add --no-cache curl
 
-RUN npm install --only=production
 
+# Copia e instala somente as dependências de produção
+COPY package.json package-lock.json ./
+RUN npm install --omit=dev
+
+# Copia o código compilado ('dist/') da etapa de build
+COPY --from=builder /usr/src/app/dist ./dist
+
+# Copia arquivos de configuração (se houver)
+COPY nest-cli.json tsconfig.json ./
+
+# Porta padrão para a API
 EXPOSE 3000
 
-CMD ["npm", "run", "start:prod"]
+# O comando de inicialização é o da API, mas será sobrescrito no Docker Compose
+CMD [ "node", "dist/apps/planejamento-ethos/main.js" ]

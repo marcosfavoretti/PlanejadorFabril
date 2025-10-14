@@ -9,12 +9,12 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "start:dev:importa": "nest start --watch --debug importa-pedido",
-    "start:dev:worker": "nest start --watch --debug planeja-worker",
+    "start:dev:importa": "nest start importa-pedido --watch --debug",
+    "start:dev:worker": "nest start planeja-worker --watch --debug",
     "start:dev:api": "nest start --watch",
     "start:dev:env": "concurrently \"npm:start:dev:api\" \"npm:start:dev:worker\" \"npm:start:dev:pedido\" --prefix-colors cyan.bold,yellow.bold,green.bold",
     "dev-api": "nest start --watch planejamento-ethos",
-    "build": "nest build",
+    "build": "nest build importa-pedido planeja-worker planejamento-ethos",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -37,6 +37,7 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/schedule": "^6.0.0",
     "@nestjs/swagger": "^11.2.0",
+    "@nestjs/terminus": "^11.0.0",
     "@nestjs/typeorm": "^11.0.0",
     "@types/axios": "^0.9.36",
     "axios": "^1.11.0",
