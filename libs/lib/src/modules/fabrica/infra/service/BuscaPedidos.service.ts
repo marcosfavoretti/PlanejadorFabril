@@ -8,6 +8,7 @@ import { PlanejamentoSnapShot } from "../../@core/entities/PlanejamentoSnapShot.
 
 export class BuscaPedidosService
     implements IBuscaAtraso {
+        
     constructor(
         @Inject(ConsultaPlanejamentoService) private consultaPlanejamento: ConsultaPlanejamentoService
     ) { }

@@ -27,7 +27,7 @@ export class ItemService {
         });
     }
     
-    async consultarTodosItens(): Promise<Item[]> {
+    async consultarTodosItensZerozero(): Promise<Item[]> {
         return await this.itemRepository.find({
             where: {
                 Item: Like('%-000-%')

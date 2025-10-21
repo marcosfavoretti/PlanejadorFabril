@@ -5,5 +5,8 @@ export class ForkFabricaProps {
     user: User;
     isPrincipal: boolean;
     fabrica: Fabrica;
+    /**
+     * @description força a fabrica ser checkpoint
+     */
     forceCheckPoint?: boolean = false
 }

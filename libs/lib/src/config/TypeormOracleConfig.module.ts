@@ -16,6 +16,6 @@ export function typeormOracleConfig(): DynamicModule {
     },
     synchronize: false,
     logging: false,
-    autoLoadEntities: true,
+    autoLoadEntities: false,
   });
 }

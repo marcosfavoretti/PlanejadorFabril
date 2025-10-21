@@ -46,7 +46,7 @@ export class PedidoLogixDAO {
                     SELECT 1 
                     FROM pedido p
                     WHERE p.hash = o.identificador
-                ) and o.item IN ('20-000-00398A');
+                ) and o.item IN ('20-000-00398A', '20-000-00220', '20-000-00276E');
             `);
         return pedidosLogix;
     }

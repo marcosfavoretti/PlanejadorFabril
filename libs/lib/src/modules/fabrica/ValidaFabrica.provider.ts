@@ -7,7 +7,7 @@ export const ValidaFabrica = Symbol('ValidaFabrica')
 
 export const ValidaFabricaProvider: Provider = {
     provide: ValidaFabrica,
-    useFactory: (fpai: IValidaPlanejamento, vPlan: ValidaFabricaPlanejamento): IValidaPlanejamento[] => [
+    useFactory: (fpai: IValidaPlanejamento, vPlan: IValidaPlanejamento): IValidaPlanejamento[] => [
         fpai,
         vPlan
     ],

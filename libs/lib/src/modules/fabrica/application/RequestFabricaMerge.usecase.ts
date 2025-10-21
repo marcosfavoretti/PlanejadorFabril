@@ -6,7 +6,6 @@ import { FabricaService } from "../infra/service/Fabrica.service";
 import { ValidaFabrica } from "../ValidaFabrica.provider";
 import { IValidaFabrica } from "../@core/interfaces/IValidaFabrica";
 import { FabricaDuplicadaMergeException } from "../@core/exception/FabricaDuplicadaMerge.exception";
-import { IGeraCheckPoint } from "../@core/interfaces/IGeraCheckPoint";
 
 export class RequestFabricaMergeUseCase {
     constructor(

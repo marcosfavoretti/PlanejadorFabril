@@ -11,7 +11,6 @@ import { GerenciaDividaService } from "../infra/service/GerenciaDivida.service";
 import { startOfDay } from "date-fns";
 import { PlanejamentoTemporarioBuilder } from "../../planejamento/@core/builder/PlanejamentoTemporario.builder";
 import { ConsultaPlanejamentoService } from "../infra/service/ConsultaPlanejamentos.service";
-import { PlanejamentoOverWriteByPedidoService } from "../@core/services/PlanejamentoOverWriteByPedido.service";
 
 export class AdicionarPlanejamentoManualUseCase {
     constructor(

@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Pedido } from "@libs/lib/modules/pedido/@core/entities/Pedido.entity";
+import { ItemResDto } from "./ItemRes.dto";
 
 export class PedidoResponseDTO {
     @ApiProperty()
@@ -21,14 +22,14 @@ export class PedidoResponseDTO {
     processado: boolean;
 
     @ApiProperty()
-    item: string;
+    item: ItemResDto;
 
     static fromEntity(pedido: Pedido): PedidoResponseDTO {
         const novo = new PedidoResponseDTO();
         novo.codigo = pedido.codigo;
         novo.dataEntrega = pedido.dataEntrega;
         novo.id = pedido.id;
-        novo.item = pedido.item?.Item || 'FALTANDO_CADASTRO';
+        novo.item = {Item: pedido.item?.Item || 'FALTANDO_CADASTRO', tipo_item : pedido.item?.tipo_item || 'FALTANDO_CADASTRO'};
         novo.lote = pedido.lote;
         novo.processado = pedido.processado;
         return novo;

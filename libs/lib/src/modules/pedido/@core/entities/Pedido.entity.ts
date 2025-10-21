@@ -1,9 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToMany, CreateDateColumn } from "typeorm";
 import * as datefns from "date-fns";
 import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
 import { Planejamento } from "@libs/lib/modules/planejamento/@core/entities/Planejamento.entity";
 import { config } from "dotenv";
 config()
+
 @Entity()
 export class Pedido {
     @PrimaryGeneratedColumn("increment")
@@ -24,6 +25,9 @@ export class Pedido {
     @ManyToOne(() => Item, { eager: true })
     @JoinColumn({ name: 'item' })
     item: Item;
+
+    @CreateDateColumn()
+    dataImportacao: Date;
 
     @OneToMany(() => Planejamento, plan => plan.pedido, {onDelete: 'CASCADE'})
     planejamentos: Planejamento[];

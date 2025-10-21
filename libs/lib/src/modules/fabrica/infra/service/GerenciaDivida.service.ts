@@ -40,12 +40,13 @@ export class GerenciaDividaService
     async resolverDividas(props: CalculaDividaDoPlanejamentoProps): Promise<Divida[]> {//esse metodo logo nao podera mais executar a interface dentro dele
         try {
             // TODO IMPROVE: para tentar deixar menos custoso isso
-            const dividas = await this.calculoDivida.calc(props);
-            
+            const dividas = (await this.calculoDivida.calc(props))
+                .filter(divida => divida.qtd > 0);
+
             await this.dividaService.removerDividaNaFabricaDoPedido(props.fabrica, props.pedido);
-            
+
             const dividasParaAlterar: Divida[] = [];
-            
+
             dividas.forEach(divida =>
                 dividasParaAlterar.push(
                     new DividaBuilder()

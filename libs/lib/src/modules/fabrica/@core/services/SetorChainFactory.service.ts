@@ -19,6 +19,18 @@ export class SetorChainFactoryService {
         return this.pipeProducao;
     }
 
+
+    getSetoresAsList(): CODIGOSETOR[] {
+        const setores: CODIGOSETOR[] = []
+        let setorCorrente = this.pipeProducao;
+        setores.push(setorCorrente.getSetorCode());
+        while(setorCorrente.getNextSetor()){
+            setorCorrente = setorCorrente.getNextSetor()!
+            setores.push(setorCorrente.getSetorCode())
+        }
+        return setores;
+    }
+
     setMetodoDeAlocacaoCustomTodos(pipeProducaoCustom: SetorService, setores: CODIGOSETOR[], metodoDeAlocacao: MetodoDeAlocacao): SetorService {
         const pipeAsList = pipeProducaoCustom.getSetoresInChain(setores);
         pipeAsList.forEach(pipe => pipe.setMetodoDeAlocacao(metodoDeAlocacao));

@@ -2,11 +2,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsObject, IsString } from 'class-validator';
 import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
 import { CODIGOSETOR } from "@libs/lib/modules/planejamento/@core/enum/CodigoSetor.enum";
+import { ItemResDto } from './ItemRes.dto';
 
 export class ConsultarTabelaCapabilidadeDTO {
-    @ApiProperty({ description: 'Código do item', example: 'ITEM123' })
-    @IsString()
-    item: string;
+
+    @ApiProperty({ description: 'item e apelido do item', type: ItemResDto})
+    item: ItemResDto;
 
     @ApiProperty({
         description: 'Capabilidade por setor',
@@ -42,7 +43,10 @@ export class ConsultarTabelaCapabilidadeDTO {
         const capabilidade_00020 = item.itemCapabilidade.find(cap => cap.setor.codigo === CODIGOSETOR.PINTURAPO);
 
         return {
-            item: item.Item,
+            item: {
+                Item: item.Item,
+                tipo_item: item.tipo_item
+            },
             capabilidade: {
                 "00011": capabilidade_00011?.capabilidade || 0,
                 "00015": capabilidade_00015?.capabilidade || 0,

@@ -15,6 +15,7 @@ export { ConsultarPedidosPlanejadosUseCase } from './ConsultarPedidosPlanejados.
 export {
     AdicionarPlanejamentoManualUseCase
 } from "./AdicionarPlanejamentoManual.usecase"
+export {ConsultarHistoricoFabricaUseCase} from "./ConsultarHistoricoFabrica.usecase";
 export { ReplanejarPedidoUseCase } from './ReplanejarPedido.usecase'
 export { MergeFabricaUseCase } from "./MergeFabrica.usecase";
 export { ResetaFabricaUseCase } from "./ResetaFabrica.usecase";

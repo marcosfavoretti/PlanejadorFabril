@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
 import { IsDate, IsEnum, IsNumber, IsOptional, IsString, Min, MinDate } from "class-validator";
+import { startOfToday } from "date-fns";
 
 export class AtualizarPlanejamentoDTO {
     @ApiProperty()
@@ -23,7 +24,7 @@ export class AtualizarPlanejamentoDTO {
     @IsOptional()
     @Transform(({ value }) => value && new Date(value))
     @IsDate()
-    @MinDate(new Date())
+    @MinDate(startOfToday())
     dia: Date;
 
 }

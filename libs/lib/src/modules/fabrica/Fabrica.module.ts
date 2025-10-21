@@ -27,6 +27,7 @@ import {
     ResetaFabricaUseCase,
     RemoverPlanejamentoUseCase,
     DeletarFabricaUseCase,
+    ConsultarHistoricoFabricaUseCase,
     SincronizarFabricaPrivadaUseCase
 } from "./application";
 
@@ -56,6 +57,7 @@ import {
         SincronizarFabricaPrivadaUseCase,
         RequestFabricaForkUseCase,
         ConsutlarFabricasDoUsuarioUseCase,
+        ConsultarHistoricoFabricaUseCase,
         ConsultarPlanejamentosUseCase,
         ConsultarFabricaUseCase,
         ConsultarPedidosPlanejadosUseCase,
@@ -73,6 +75,7 @@ import {
         ResetaFabricaUseCase,
         ConsultarFabricaUseCase,
         AtualizarPlanejamentoUseCase,
+        ConsultarHistoricoFabricaUseCase,
         ConsutlarFabricasDoUsuarioUseCase,
         ConsultarPlanejamentosUseCase,
         ConsultarPedidosPlanejadosUseCase,

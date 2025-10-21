@@ -49,6 +49,11 @@ import { MergeRequestRepository } from "./infra/repository/MergeRequest.reposito
 import { ICalculoDivida } from "./@core/interfaces/ICalculoDivida";
 import { CalculaDividaDoPlanejamento } from "./@core/services/CalculaDividaDoPlanejamento";
 import { config } from "dotenv";
+import { ComparaMudancaFabricaExecutorService } from "./@core/services/ComparaMudancaFabricaExecutor.service";
+import { ValidMudancaFabricaEstrategiasProvider } from "./MudancaFabrica.provider";
+import { MudancaPedido } from "./@core/services/MudancaPedido";
+import { MudancaPlanejamento } from "./@core/services/MudancaPlanejamento";
+import { MudancaQtdPlanejamento } from "./@core/services/MudancaQtdPlanejamento";
 config()
 @Module({
     imports: [
@@ -57,8 +62,13 @@ config()
         ItemServiceModule,
     ],
     providers: [
+        ComparaMudancaFabricaExecutorService,
         MergeRequestService,
         ValidaFabricaPai,
+        MudancaPedido,
+        MudancaQtdPlanejamento,
+        MudancaPlanejamento,
+        ValidMudancaFabricaEstrategiasProvider,
         ValidaFabricaPlanejamento,
         ValidaFabricaProvider,
         ValidadorPlanejamentoProvider,
@@ -122,6 +132,7 @@ config()
         MergeRequestService,
         MergeRequestRepository,
         ValidadorPlanejamento,
+        ComparaMudancaFabricaExecutorService,
         ValidaFabricaPai,
         ValidaFabricaPlanejamento,
         ValidaFabricaProvider,

@@ -1,4 +1,4 @@
-import { Inject, InternalServerErrorException, NotFoundException } from "@nestjs/common";
+import { Inject, InternalServerErrorException, Logger, NotFoundException } from "@nestjs/common";
 import { AtualizarPlanejamentoDTO } from "@dto/AtualizarPlanejamento.dto";
 import { FabricaService } from "../infra/service/Fabrica.service";
 import { PlanejamentoService } from "@libs/lib/modules/planejamento/infra/services/Planejamento.service";
@@ -27,6 +27,9 @@ export class AtualizarPlanejamentoUseCase {
 
     async atualizar(dto: AtualizarPlanejamentoDTO): Promise<void> {
         try {
+
+            console.log(dto);
+
             const [fabrica, planejamento] = await Promise.all([
                 this.fabricaService.consultaFabrica(dto.fabricaId),
                 this.planejamentoService.consultaPlanejamento(dto.planejamendoId)
@@ -45,16 +48,16 @@ export class AtualizarPlanejamentoUseCase {
                 await this.substituirPlanejamento(fabrica, planejamentoSnapShotAlvo, planejamentoTemporario);
             }
 
+            Logger.debug(`>>>>>>>>>>> ${dto.dia} ${planejamento.dia} ${isSameDay(dto.dia, planejamento.dia)}`);
             if (!isSameDay(dto.dia, planejamento.dia)) {
                 if (isBefore(dto.dia, planejamento.dia)) {
                     planejamentoTemporario.dia = dto.dia;
                     await this.substituirPlanejamento(fabrica, planejamentoSnapShotAlvo, planejamentoTemporario);
                 }
-                else{
+                else {
                     await this.replanejarDia(fabrica, planejamento.pedido, planejamentoTemporario, dto.dia);
                 }
             }
-
             await this.calcularEResolverDividas(fabrica, planejamento.pedido);
         }
         catch (error) {
@@ -94,8 +97,15 @@ export class AtualizarPlanejamentoUseCase {
         snapshotAlvo: PlanejamentoSnapShot,
         planejamentoTemporario: PlanejamentoTemporario
     ) {
-        await this.gerenciadorPlanejado.removePlanejamento(fabrica, [snapshotAlvo]);
-        await this.gerenciadorPlanejado.appendPlanejamento(fabrica, planejamentoTemporario.pedido, [planejamentoTemporario]);
+        await this.gerenciadorPlanejado.removePlanejamento(
+            fabrica,
+            [snapshotAlvo]
+        );
+        await this.gerenciadorPlanejado.appendPlanejamento(
+            fabrica,
+            planejamentoTemporario.pedido,
+            [planejamentoTemporario]
+        );
     }
 
     private async calcularEResolverDividas(
@@ -109,7 +119,7 @@ export class AtualizarPlanejamentoUseCase {
             PlanejamentoTemporario.createByEntity(p));
 
         console.log('olhe')
-        console.log(allPlanejamentosAsTemporario.map(a=>`${a.dia} ${a.qtd} ${a.setor}`))
+        console.log(allPlanejamentosAsTemporario.map(a => `${a.dia} ${a.qtd} ${a.setor}`))
 
         const dividas = await this.gerenciaDividaService.resolverDividas({
             fabrica,

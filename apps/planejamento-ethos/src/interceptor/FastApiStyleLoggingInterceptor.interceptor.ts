@@ -18,12 +18,12 @@ export class FastApiStyleLoggingInterceptor implements NestInterceptor {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
     const { method, originalUrl } = request;
-
+    const IP = context.switchToHttp().getRequest().ip;
     return next.handle().pipe(
       tap(() => {
         const statusCode = response.statusCode;
         const duration = Date.now() - now;
-        this.logger.debug(`${method} ${originalUrl} ${statusCode} - ${duration}ms`);
+        this.logger.debug(`${IP} ${method} ${originalUrl} ${statusCode} - ${duration}ms`);
       }),
     );
   }

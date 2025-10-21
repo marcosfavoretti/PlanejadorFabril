@@ -35,9 +35,7 @@ export class GerenciadorPlanejamento implements
         planejamentosNovos: PlanejamentoTemporario[]
     ): Promise<Planejamento[]> {
         await this.planejamentoValidatorExecutor.execute(fabrica, pedido, planejamentosNovos);
-        console.time('efetiva')
         const resultados = await this.efetivaPlanejamentoService.efetiva(fabrica, planejamentosNovos);
-        console.timeEnd('efetiva')
         return resultados.flatMap(plan => plan.planejamento);
     }
 
@@ -45,11 +43,6 @@ export class GerenciadorPlanejamento implements
         fabrica: Fabrica,
         planejamento: PlanejamentoSnapShot[]
     ): Promise<void> {
-        // const planejamentoSnapShot = await this.consultaPlanejamentoService.consultaPlanejamentoEspecifico(
-        //     fabrica,
-        //     planejamento,
-        //     new PlanejamentoOverWriteByPedidoService()
-        // );
         const planPromises = planejamento.map(m => this.efetivaPlanejamentoService.remove(fabrica, m));
         await Promise.all(planPromises);
     }

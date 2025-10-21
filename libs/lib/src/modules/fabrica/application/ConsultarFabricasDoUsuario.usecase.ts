@@ -33,7 +33,7 @@ export class ConsutlarFabricasDoUsuarioUseCase {
             return fabricas
                 .filter(f => !f.principal)
                 .map(f => UserFabricaResponseDto.fromEntity(f,
-                    (fabricaPrincipal?.fabricaId !== f.fabricaPai?.fabricaId || currentMergesFabricaIds.includes(f.fabricaId))
+                    (currentMergesFabricaIds.includes(f.fabricaId))
                 ));
 
         } catch (error) {

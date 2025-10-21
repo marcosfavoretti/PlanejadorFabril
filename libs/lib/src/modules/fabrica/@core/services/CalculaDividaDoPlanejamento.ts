@@ -1,7 +1,6 @@
-import { Divida } from "../entities/Divida.entity";
 import { CalculaDividaDoPlanejamentoProps, ICalculoDivida } from "../interfaces/ICalculoDivida";
 import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/classes/PlanejamentoTemporario";
-import { Inject } from "@nestjs/common";
+import { Inject, Logger } from "@nestjs/common";
 import { IMontaEstrutura } from "../../../item/@core/interfaces/IMontaEstrutura.ts";
 import { DividaTemporariaBuilder } from "../builder/DividaTemporaria.builder";
 import { IConsultaRoteiro } from "../../../item/@core/interfaces/IConsultaRoteiro";
@@ -11,7 +10,6 @@ import { PipeSemSetorException } from "../exception/PipeSemOSetor.exception";
 
 
 export class CalculaDividaDoPlanejamento implements ICalculoDivida {
-
 
   constructor(
     @Inject(IMontaEstrutura) private montaEstrutura: IMontaEstrutura,
@@ -64,11 +62,17 @@ export class CalculaDividaDoPlanejamento implements ICalculoDivida {
           );
           const totalPlanejado = planejamentosSetor.reduce((sum, plan) => sum + plan.qtd, 0);
           const totalPlanejadoIdeal = props.pedido.lote;
+
+          Logger.warn(totalPlanejadoIdeal +'-------------'+ totalPlanejado+'-----'+roteiro)
+
+
+          //isso serve para ver se o setor da estrutura esta sendo mapeado nesse programa de estrutura
+          //por exemplo. Solda Robo, nao esta, logo ela nao deve ser contabilizado
+          await this.setorChainFactoryService.getSetor(roteiro);
+
           const resultado = totalPlanejadoIdeal - totalPlanejado;
 
-          this.setorChainFactoryService.getSetor(roteiro);
-
-          resultado > 0 &&
+          (resultado !== 0) &&
             dividas.push(
               new DividaTemporariaBuilder()
                 .item(targetItem)
@@ -77,11 +81,10 @@ export class CalculaDividaDoPlanejamento implements ICalculoDivida {
                 .setor(roteiro)
                 .build()
             );
-
         }
         catch (error) {
-          console.error(error);
           if (error instanceof PipeSemSetorException) continue;
+          console.error(error);
           throw error;
         }
       }

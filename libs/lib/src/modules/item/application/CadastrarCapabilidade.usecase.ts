@@ -11,7 +11,7 @@ export class CadastrarItemCapabilidadeUseCase {
 
     async cadastrar(dto: ConsultarTabelaCapabilidadeDTO): Promise<void> {
         try {
-            const item = await this.itemService.consultarItem(dto.item);
+            const item = await this.itemService.consultarItem(dto.item.Item);
             const itemNovo = await this.atualizaCapabilidade.atualizar(item, dto);
             await this.itemService.salvarItem(itemNovo);
         } catch (error) {

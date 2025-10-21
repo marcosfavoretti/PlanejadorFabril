@@ -13,7 +13,7 @@ import { PlanejamentoResponseDTO } from "@dto/PlanejamentoResponse.dto";
 import { ConsultaPlanejamentosDTO } from "@dto/ConsultaPlanejamentos.dto";
 import { ConsultarFabricaUseCase } from "@libs/lib/modules/fabrica/application/ConsultarFabrica.usecase";
 import { ConsutlarFabricaDTO } from "@dto/ConsultarFabrica.dto";
-import { AdicionarPlanejamentoManualUseCase, AtualizarPlanejamentoUseCase, PlanejarPedidoUseCase, ReplanejarPedidoUseCase } from "@libs/lib/modules/fabrica/application";
+import { AdicionarPlanejamentoManualUseCase, AtualizarPlanejamentoUseCase, ConsultarHistoricoFabricaUseCase, PlanejarPedidoUseCase, ReplanejarPedidoUseCase } from "@libs/lib/modules/fabrica/application";
 import { AtualizarPlanejamentoDTO } from "@dto/AtualizarPlanejamento.dto";
 import { ResetaFabricaUseCase } from "@libs/lib/modules/fabrica/application/ResetaFabrica.usecase";
 import { ResetaFabricaDTO } from "@dto/ResetaFabrica.dto";
@@ -40,6 +40,7 @@ import { Roles } from "@libs/lib/modules/cargos/@core/decorator/Cargo.decorator"
 import { CargoEnum } from "@libs/lib/modules/cargos/@core/enum/CARGOS.enum";
 import { SincronizarFabricaPrivadaUseCase } from "@libs/lib/modules/fabrica/application/SincronizarFabricaPrivada.usecase";
 import { SincronizarFabricaPrivadaDTO } from "@dto/SincronizarFabricaPrivada.dto";
+import { MudancasResDto } from "@dto/MudancaRes.dto";
 
 @UseGuards(
     JwtGuard
@@ -139,7 +140,6 @@ export class FabricaController {
     }
 
     @Inject(ConsultarPlanejamentosUseCase) private consultarPlanejamentosUseCase: ConsultarPlanejamentosUseCase
-    @UseGuards(DonoDaFabricaGuard)
     @ApiResponse({
         type: () => PlanejamentoResponseDTO,
         isArray: true
@@ -153,7 +153,6 @@ export class FabricaController {
 
 
     @Inject(ConsultarFabricaUseCase) private consultarFabricaUseCase: ConsultarFabricaUseCase
-    @UseGuards(DonoDaFabricaGuard)
     @ApiResponse({
         type: () => FabricaResponseDto
     })
@@ -169,7 +168,6 @@ export class FabricaController {
         type: PedidosPlanejadosResponseDTO,
         isArray: true
     })
-    @UseGuards(DonoDaFabricaGuard)
     @Get('/planejamentos/pedidos')
     async consultarPedidosPlanejadosMethod(
         @Query() payload: ConsutlarFabricaDTO
@@ -235,15 +233,14 @@ export class FabricaController {
     }
 
     @Inject(DesplanejarPedidoUseCase) private desplanejarPedidoUseCase: DesplanejarPedidoUseCase;
-    @UseGuards(
-        //    NaPrincipalNao,
-        DonoDaFabricaGuard
-    )
+    @Roles(CargoEnum.ADMIN, CargoEnum.PCP)
+    @UseGuards(RolesGuard)
     @Delete('/fabrica/pedido')
     async desplanejarPedidoNaFabricaMethod(
         @Body() payload: DesplanejarPedidoDto,
+        @Req() request: CustomRequest
     ): Promise<void> {
-        return await this.desplanejarPedidoUseCase.desplanejar(payload);
+        return await this.desplanejarPedidoUseCase.desplanejar(payload, request.user);
     }
 
     @Inject(DeletarFabricaUseCase) private deletarFabricaUseCase: DeletarFabricaUseCase;
@@ -256,12 +253,26 @@ export class FabricaController {
         return await this.deletarFabricaUseCase.deleta(payload, req.user);
     }
 
+    @Inject(ConsultarHistoricoFabricaUseCase) private consultarHistoricoFabricaUseCase: ConsultarHistoricoFabricaUseCase;
+    @ApiResponse({
+        type: () => MudancasResDto,
+        isArray: true
+    })
+    @ApiOperation({ summary: 'busca mudancas que foram aplicadas nessa fabrica' })
+    @Post('/historico')
+    async consultaHistoricoFabricaMethod(
+        @Body() payload: ConsutlarFabricaDTO,
+        @Req() req: CustomRequest,
+    ): Promise<MudancasResDto[]> {
+        return await this.consultarHistoricoFabricaUseCase.executaComparacao(payload);
+    }
+
     @Inject(SincronizarFabricaPrivadaUseCase) private sincronizarFabricaPrivadaUseCase: SincronizarFabricaPrivadaUseCase;
-    @UseGuards(NaPrincipalNao)
+    @UseGuards(NaPrincipalNao, DonoDaFabricaGuard)
     @ApiResponse({
         type: () => SincronizarFabricaPrivadaDTO
     })
-    @ApiOperation({summary: 'sicronizar com o nó principal atual',description: 'operação que força uma fabrica a mudar o pai dela para o nó principal mais recente'})
+    @ApiOperation({ summary: 'sicronizar com o nó principal atual', description: 'operação que força uma fabrica a mudar o pai dela para o nó principal mais recente' })
     @Post('/sincronizar')
     async sincronizarFabricaPrivadaMethod(
         @Body() payload: SincronizarFabricaPrivadaDTO,

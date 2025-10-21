@@ -8,8 +8,8 @@ export const ValidadorPlanejamentoProvider: Provider = {
     useFactory: (
         validaData: ValidaData
     ) => [
-        // validaData
-    ],
+            validaData
+        ],
     inject: [
         ValidaData
     ]

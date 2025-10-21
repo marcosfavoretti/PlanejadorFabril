@@ -8,7 +8,7 @@ export class ConsultarItemCapabilidadeTabelaUseCase {
     ) { }
 
     async consultar(): Promise<ConsultarTabelaCapabilidadeDTO[]> {
-        const itens = await this.itemService.consultarTodosItens();
-        return itens.map(item => ConsultarTabelaCapabilidadeDTO.fromEntities(item))
+        const itens = await this.itemService.consultarTodosItensZerozero();
+        return itens.map(item => ConsultarTabelaCapabilidadeDTO.fromEntities(item));
     }
 }

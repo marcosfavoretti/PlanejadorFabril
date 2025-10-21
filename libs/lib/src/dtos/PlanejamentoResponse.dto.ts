@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsInt } from 'class-validator';
 import { Planejamento } from "@libs/lib/modules/planejamento/@core/entities/Planejamento.entity";
+import { ItemResDto } from './ItemRes.dto';
+import { SetorResDTO } from './SetorRes.dto';
 
 export class PlanejamentoResponseDTO {
     @ApiProperty()
@@ -8,10 +10,10 @@ export class PlanejamentoResponseDTO {
     planejamentoId: number;
 
     @ApiProperty() 
-    item: string;
+    item: ItemResDto;
 
     @ApiProperty() 
-    setor: string;
+    setor: SetorResDTO;
 
     @ApiProperty()
     pedido: string;
@@ -26,8 +28,8 @@ export class PlanejamentoResponseDTO {
     static fromEntity(entity: Planejamento): PlanejamentoResponseDTO {
         const dto = new PlanejamentoResponseDTO();
         dto.planejamentoId = entity.planejamentoId;
-        dto.item = entity.item.Item; 
-        dto.setor = entity.setor.codigo; 
+        dto.item = {Item:entity.item.Item, tipo_item:entity.item.tipo_item}; 
+        dto.setor = {codigo: entity.setor.codigo, nome:entity.setor.nome}; 
         dto.pedido = String(entity.pedido.id); 
         dto.dia = entity.dia;
         dto.qtd = entity.qtd;

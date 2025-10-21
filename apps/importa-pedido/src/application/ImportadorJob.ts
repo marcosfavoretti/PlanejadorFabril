@@ -3,10 +3,9 @@ import { PedidoLogixDAO } from "apps/importa-pedido/src/infra/service/PedidosLog
 import { Pedido } from "@libs/lib/modules/pedido/@core/entities/Pedido.entity";
 import { PedidoService } from "@libs/lib/modules/pedido/infra/service/Pedido.service";
 import { EmailService } from "@libs/lib/modules/shared/services/Email.service";
-import { ControlFile, FileService } from "@libs/lib/modules/shared/services/JobsFile.service";
 import { Inject, Logger, OnModuleInit } from "@nestjs/common";
 import { Cron, CronExpression, Interval } from "@nestjs/schedule";
-import { format, startOfDay, startOfMonth, startOfToday } from "date-fns";
+import { format, startOfMonth} from "date-fns";
 import { Email } from "@libs/lib/modules/shared/@core/classes/Email";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";

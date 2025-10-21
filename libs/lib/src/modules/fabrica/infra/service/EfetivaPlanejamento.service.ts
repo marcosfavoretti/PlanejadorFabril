@@ -23,7 +23,6 @@ export class EfetivaPlanejamentoService {
         try {
             // 1️⃣ Agrupa os planejamentos por chave única para evitar duplicatas
             const summarizePlans = new Map<string, PlanejamentoTemporario>();
-            console.log('initialize')
 
             for (const planTemp of planejamentosTemporarios) {
                 const key = `${planTemp.setor}-${planTemp.item.getCodigo()}-${planTemp.dia.toISOString()}-${planTemp.pedido.id}`;
@@ -34,45 +33,30 @@ export class EfetivaPlanejamentoService {
                     summarizePlans.set(key, planTemp);
                 }
             }
-            console.log('depois do for')
-            // 2️⃣ Cria os objetos de snapshot e planejamento em memória (sem salvar)
+
             const novosSnapshots = Array.from(summarizePlans.values()).map(plan =>this.criarSnapshot(fabrica, plan));
             
-            console.log('depois do for cast')
-
-            console.log(novosSnapshots)
-
-            // Se não houver snapshots para criar, retorna um array vazio.
             if (novosSnapshots.length === 0) {
                 return [];
             }
 
-            // 3️⃣ Extrai e salva APENAS os planejamentos para obter seus IDs
             const planejamentosParaSalvar = novosSnapshots.map(snapshot => snapshot.planejamento);
             const insertResultPlanejamentos = await this.planejamentoRepository.insert(planejamentosParaSalvar);
 
-            // 4️⃣ O PONTO CRÍTICO: Atribui os IDs gerados de volta aos objetos em memória
-            // Isso garante que a relação de chave estrangeira seja estabelecida corretamente.
             novosSnapshots.forEach((snapshot, index) => {
                 const newId = insertResultPlanejamentos.identifiers[index].planejamentoId; // ou o nome correto da sua PK
                 snapshot.planejamento.planejamentoId = newId;
             });
 
-            console.log('antes do inser')
-            // 5️⃣ Agora sim, com os IDs de planejamento corretos, salva os snapshots
             const insertResultSnapshots = await this.planejamentoSnapShotRepository.insert(novosSnapshots);
 
-            // 6️⃣ Retorna os snapshots recém-criados e salvos para confirmação
             const ids = insertResultSnapshots.identifiers.map(i => i.planejamentoSnapShotId);
-
-            console.log('deposi do inser')
 
             const planejamentosSalvos = await this.planejamentoSnapShotRepository.find({
                 where: {
                     planejamentoSnapShotId: In(ids)
                 },
             });
-            console.log('sepa na coleta de dados')
             return planejamentosSalvos;
 
         } catch (error) {
