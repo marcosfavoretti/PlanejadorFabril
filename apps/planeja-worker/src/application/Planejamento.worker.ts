@@ -10,17 +10,19 @@ export class PlanejamentoWorker {
         @Inject(PlanejarPedidoUseCase) private planejarPedidoUseCase: PlanejarPedidoUseCase,
     ) { }
     private logger = new Logger();
+
     @Process('planejar')
     async handle(job: Job<{ pedidoId: string }>) {
         try {
             console.log('Processando pedido', job.data.pedidoId);
-            await this.planejarPedidoUseCase.planeje({ pedidoIds: [Number(job.data.pedidoId)] });
+            await this.planejarPedidoUseCase
+                .planeje({ pedidoIds: [Number(job.data.pedidoId)] });
         } catch (error) {
             console.error('Erro no pedido', job.data.pedidoId, error);
             return Promise.resolve();
         }
-        finally{    
-            this.logger.log('Work end 👷👌')
+        finally {
+            this.logger.log('Work end 👷👌');
         }
     }
 }

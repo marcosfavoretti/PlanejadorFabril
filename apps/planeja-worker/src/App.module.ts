@@ -8,14 +8,19 @@ import { PlanejamentoWorker } from "./application/Planejamento.worker";
     imports: [
         TypeormDevConfigModule,
         FabricaModule,
-        BullModule.registerQueue({
-            defaultJobOptions: {
-                attempts: 3,
-                removeOnComplete: true,
-                removeOnFail: true
-            },
-            name: 'planejamento', // nome da fila
-        }),
+        BullModule
+            .registerQueue({
+                redis: {
+                    host: process.env.REDIS_HOST, // nome do serviço do docker-compose
+                    port: +process.env.REDIS_PORT!,
+                },
+                defaultJobOptions: {
+                    attempts: 3,
+                    removeOnComplete: true,
+                    removeOnFail: true
+                },
+                name: 'planejamento',
+            }),
     ],
     providers: [
         PlanejamentoWorker
