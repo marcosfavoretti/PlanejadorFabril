@@ -29,7 +29,7 @@ export class Pedido {
     @CreateDateColumn()
     dataImportacao: Date;
 
-    @OneToMany(() => Planejamento, plan => plan.pedido, {onDelete: 'CASCADE'})
+    @OneToMany(() => Planejamento, plan => plan.pedido, { onDelete: 'CASCADE' })
     planejamentos: Planejamento[];
 
     @Column('nvarchar')
@@ -54,6 +54,10 @@ export class Pedido {
         if (lote) this.lote = lote;
         this.processado = !!processado
         if (item) this.item = item;
+    }
+
+    ehUrgente(): boolean {
+        return datefns.differenceInBusinessDays(this.dataEntrega, new Date()) < 5;
     }
 
 

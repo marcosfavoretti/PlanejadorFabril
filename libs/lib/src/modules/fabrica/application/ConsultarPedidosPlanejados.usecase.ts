@@ -30,7 +30,7 @@ export class ConsultarPedidosPlanejadosUseCase {
             // const atrasosMap = new Map<number, PlanejamentoSnapShot[]>();
             // atraso.forEach(a => { const key = a.planejamento.pedido.id; const value = (atrasosMap.get(key) || []); atrasosMap.set(key, value.concat(a)) });
 
-            console.log('->>>', dividas.length)
+            console.log('->>>', dividas.length);
 
             const dividasMap = dividas.reduce((map, a) => {
                 const key = a.divida.pedido.id;
