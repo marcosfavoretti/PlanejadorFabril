@@ -3,6 +3,7 @@ import { FabricaModule } from "@libs/lib/modules/fabrica/Fabrica.module";
 import { BullModule } from "@nestjs/bull";
 import { Module } from "@nestjs/common";
 import { PlanejamentoWorker } from "./application/Planejamento.worker";
+import { PedidoServiceModule } from "@libs/lib/modules/pedido/PedidoService.module";
 
 @Module({
     imports: [
@@ -21,6 +22,7 @@ import { PlanejamentoWorker } from "./application/Planejamento.worker";
                 },
                 name: 'planejamento',
             }),
+            PedidoServiceModule
     ],
     providers: [
         PlanejamentoWorker

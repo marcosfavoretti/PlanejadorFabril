@@ -19,7 +19,7 @@ export class PlanejamentoWorker {
             console.log('Processando pedido', job.data.pedidoId);
             const pedido = await this.pedidoService
                 .consultarPedidos([Number(job.data.pedidoId)]);
-            
+
             //
             await this.planejarPedidoUseCase
                 .planeje({ pedidoIds: [Number(job.data.pedidoId)] });
