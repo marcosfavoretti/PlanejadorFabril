@@ -47,16 +47,7 @@ export class PedidoLogixDAO {
                     FROM pedido p
                     WHERE p.hash = o.identificador
                 ) and o.item IN (
-                 '20-000-00276E',
-                '20-000-00388E',
-                '20-000-00389E',
-                '20-000-00394D',
-                '20-000-00397C',
-                '20-000-00403C',
-                '20-000-00409C',
-                '20-000-00410C',
-                '20-000-00419A',
-                '20-000-00432A'
+                 select * from itens_to_import
                 );
             `);
         return pedidosLogix;
