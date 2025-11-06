@@ -1,12 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsObject, IsString } from 'class-validator';
+import { IsObject, IsString, ValidateNested } from 'class-validator';
 import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
 import { CODIGOSETOR } from "@libs/lib/modules/planejamento/@core/enum/CodigoSetor.enum";
 import { ItemResDto } from './ItemRes.dto';
+import { Type } from 'class-transformer';
 
 export class ConsultarTabelaCapabilidadeDTO {
 
-    @ApiProperty({ description: 'item e apelido do item', type: ItemResDto})
+    @ApiProperty({ description: 'item e apelido do item', type: ItemResDto })
+    @ValidateNested() // <--- ADICIONE ISTO
+    @Type(() =>
+        ItemResDto
+    )
     item: ItemResDto;
 
     @ApiProperty({
