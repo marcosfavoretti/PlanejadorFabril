@@ -1,21 +1,21 @@
-import * as fs from "fs/promises";
-import * as path from "path";
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 export type DefaultJson = Record<string, any>;
 
 export enum ControlFile {
-  JOBS = "jobs.json",
-  ERRORS = "errors.json",
-  ERRORS_TXT = "errors.txt"
+  JOBS = 'jobs.json',
+  ERRORS = 'errors.json',
+  ERRORS_TXT = 'errors.txt',
 }
 
 export class FileService {
-  private static basePath = path.resolve(__dirname, "../../@files");
+  private static basePath = path.resolve(__dirname, '../../@files');
 
   private static defaults: Record<ControlFile, DefaultJson> = {
     [ControlFile.JOBS]: { LASTSYNC: null },
     [ControlFile.ERRORS]: { ERRORS: [] },
-    [ControlFile.ERRORS_TXT]: {} // txt não precisa de defaults
+    [ControlFile.ERRORS_TXT]: {}, // txt não precisa de defaults
   };
 
   private static resolvePath(file: ControlFile): string {
@@ -39,39 +39,37 @@ export class FileService {
     } catch {
       const initialContent =
         file === ControlFile.ERRORS_TXT
-          ? "" // txt começa vazio
+          ? '' // txt começa vazio
           : JSON.stringify(this.defaults[file], null, 2);
 
-      await fs.writeFile(filePath, initialContent, "utf-8");
+      await fs.writeFile(filePath, initialContent, 'utf-8');
     }
   }
 
-  static async readFile<T extends DefaultJson>(
-    file: ControlFile
-  ): Promise<T> {
+  static async readFile<T extends DefaultJson>(file: ControlFile): Promise<T> {
     await this.createFile(file);
     const filePath = this.resolvePath(file);
 
     if (file === ControlFile.ERRORS_TXT) {
-      const data = await fs.readFile(filePath, "utf-8");
+      const data = await fs.readFile(filePath, 'utf-8');
       return { RAW: data } as unknown as T;
     }
 
-    const data = await fs.readFile(filePath, "utf-8");
+    const data = await fs.readFile(filePath, 'utf-8');
     return JSON.parse(data) as T;
   }
 
   static async writeFile<T extends DefaultJson>(
     file: ControlFile,
-    json: T
+    json: T,
   ): Promise<void> {
     const filePath = this.resolvePath(file);
 
     if (file === ControlFile.ERRORS_TXT) {
-      throw new Error("Use appendErrorTxt para gravar no TXT");
+      throw new Error('Use appendErrorTxt para gravar no TXT');
     }
 
-    await fs.writeFile(filePath, JSON.stringify(json, null, 2), "utf-8");
+    await fs.writeFile(filePath, JSON.stringify(json, null, 2), 'utf-8');
   }
 
   // ----------------
@@ -107,7 +105,7 @@ export class FileService {
     errors.ERRORS.push({
       message,
       timestamp: new Date().toISOString(),
-      ...extra
+      ...extra,
     });
     await this.writeErrors(errors);
 
@@ -124,9 +122,9 @@ export class FileService {
 
     const logLine =
       `[${new Date().toISOString()}] ${message}` +
-      (extra ? ` | extra: ${JSON.stringify(extra)}` : "") +
-      "\n";
+      (extra ? ` | extra: ${JSON.stringify(extra)}` : '') +
+      '\n';
 
-    await fs.appendFile(filePath, logLine, "utf-8");
+    await fs.appendFile(filePath, logLine, 'utf-8');
   }
 }

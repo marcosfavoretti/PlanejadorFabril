@@ -1,7 +1,7 @@
-import { CalendarioLogix } from "../classes/CalendarioLogix";
+import { CalendarioLogix } from '../classes/CalendarioLogix';
 
-export const ISincronizaCalendario = Symbol('ISincronizaCalendario')
+export const ISincronizaCalendario = Symbol('ISincronizaCalendario');
 
 export interface ISincronizaCalendario {
-    sincroniza(calendario: CalendarioLogix): Promise<void>;
+  sincroniza(calendario: CalendarioLogix): Promise<void>;
 }

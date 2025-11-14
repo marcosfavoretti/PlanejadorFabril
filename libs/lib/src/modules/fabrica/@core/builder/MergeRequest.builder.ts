@@ -1,6 +1,6 @@
-import { MergeRequest } from "../entities/MergeRequest.entity";
-import { Fabrica } from "../entities/Fabrica.entity";
-import { User } from "@libs/lib/modules/user/@core/entities/User.entity";
+import { MergeRequest } from '../entities/MergeRequest.entity';
+import { Fabrica } from '../entities/Fabrica.entity';
+import { User } from '@libs/lib/modules/user/@core/entities/User.entity';
 
 export class MergeRequestBuilder {
   private _fabrica: Fabrica;

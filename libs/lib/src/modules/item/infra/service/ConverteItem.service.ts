@@ -11,7 +11,7 @@
 //     async convete_para_000(partcode: string): Promise<Item> {
 //         return await this.itemService.consultarItem(partcode);
 //     }
-    
+
 //     async convete_para_110(partcode: string): Promise<Item> {
 //         const { data } = await axios.get<{partcode: string}[]>(`http://192.168.99.102:4111/estrutura/controle?partcode=${partcode}`);
 //         const partcode_resolved = data[0].partcode;

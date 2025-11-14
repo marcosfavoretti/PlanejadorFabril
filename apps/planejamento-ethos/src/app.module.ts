@@ -13,9 +13,9 @@ import { ConfigModule } from '@nestjs/config';
       },
     }),
     TypeormDevConfigModule,
-    DeliveryModule
+    DeliveryModule,
   ],
   controllers: [],
   providers: [],
 })
-export class AppModule { }
+export class AppModule {}

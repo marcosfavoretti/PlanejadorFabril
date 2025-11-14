@@ -4,6 +4,6 @@ import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
   await NestFactory.createApplicationContext(AppModule);
-  Logger.log('👨‍🏭worker para planejar👨‍🏭')
+  Logger.log('👨‍🏭worker para planejar👨‍🏭');
 }
 bootstrap();

@@ -1,12 +1,12 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsInt, IsString } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import { IsInt, IsString } from 'class-validator';
 
 export class RemoverPlanejamentoDTO {
-    @ApiProperty()
-    @IsInt()
-    planejamentoId: number
+  @ApiProperty()
+  @IsInt()
+  planejamentoId: number;
 
-    @ApiProperty()
-    @IsString()
-    fabricaId: string;
+  @ApiProperty()
+  @IsString()
+  fabricaId: string;
 }

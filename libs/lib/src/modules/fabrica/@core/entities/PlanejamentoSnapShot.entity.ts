@@ -3,11 +3,11 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  PrimaryGeneratedColumn
-} from "typeorm";
-import { Fabrica } from "./Fabrica.entity";
-import { Planejamento } from "@libs/lib/modules/planejamento/@core/entities/Planejamento.entity";
-import { SnapShotEstados } from "../enum/SnapShotEstados.enum";
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { Fabrica } from './Fabrica.entity';
+import { Planejamento } from '@libs/lib/modules/planejamento/@core/entities/Planejamento.entity';
+import { SnapShotEstados } from '../enum/SnapShotEstados.enum';
 
 @Entity()
 export class PlanejamentoSnapShot {
@@ -33,7 +33,10 @@ export class PlanejamentoSnapShot {
   }
 
   ehAtrasado(): boolean {
-    return this.planejamento.dia.getTime() > this.planejamento.pedido.getSafeDate().getTime();
+    return (
+      this.planejamento.dia.getTime() >
+      this.planejamento.pedido.getSafeDate().getTime()
+    );
   }
 
   deepCopy(): PlanejamentoSnapShot {

@@ -1,6 +1,12 @@
-import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
-import { Setor } from "@libs/lib/modules/setor/@core/entities/Setor.entity";
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Item } from '@libs/lib/modules/item/@core/entities/Item.entity';
+import { Setor } from '@libs/lib/modules/setor/@core/entities/Setor.entity';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity()
 export class Mercado {
@@ -11,11 +17,11 @@ export class Mercado {
   data: Date;
 
   @ManyToOne(() => Setor)
-  @JoinColumn({name: 'setor'})
+  @JoinColumn({ name: 'setor' })
   setor: Setor;
 
   @ManyToOne(() => Item)
-  @JoinColumn({name: 'item'})
+  @JoinColumn({ name: 'item' })
   item: Item;
 
   @Column('int')

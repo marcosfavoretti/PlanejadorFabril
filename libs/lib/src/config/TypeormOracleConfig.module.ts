@@ -1,5 +1,5 @@
-import { DynamicModule } from "@nestjs/common";
-import { TypeOrmModule } from "@nestjs/typeorm";
+import { DynamicModule } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 export function typeormOracleConfig(): DynamicModule {
   return TypeOrmModule.forRoot({

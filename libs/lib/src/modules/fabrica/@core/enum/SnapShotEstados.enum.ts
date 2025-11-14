@@ -1,5 +1,5 @@
 export enum SnapShotEstados {
-    base = 'base',
-    overwrite = 'overwrite',
-    delete = 'delete'
+  base = 'base',
+  overwrite = 'overwrite',
+  delete = 'delete',
 }

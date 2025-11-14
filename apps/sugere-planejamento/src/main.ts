@@ -5,9 +5,8 @@ import { AppModule } from '../src/App.module';
 async function bootstrap() {
   const logger = new Logger();
   const app = await NestFactory.create(AppModule);
-  await app.init()
-    .then(
-      () => logger.log('🆗👌 Sugestão de planejamentos 🆗👌')
-    );
+  await app
+    .init()
+    .then(() => logger.log('🆗👌 Sugestão de planejamentos 🆗👌'));
 }
 bootstrap();

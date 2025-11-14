@@ -1,9 +1,9 @@
-import { Module } from "@nestjs/common";
-import { MercadoServiceModule } from "./MercadosService.module";
+import { Module } from '@nestjs/common';
+import { MercadoServiceModule } from './MercadosService.module';
 
 @Module({
-    imports: [MercadoServiceModule],
-    providers: [],
-    exports: []
+  imports: [MercadoServiceModule],
+  providers: [],
+  exports: [],
 })
-export class MercadosModule { }
+export class MercadosModule {}

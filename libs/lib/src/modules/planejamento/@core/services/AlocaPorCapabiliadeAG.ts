@@ -11,7 +11,7 @@
 
 // export class AlocaPorCapabilidadeAG
 //     extends MetodoDeAlocacao {
-    
+
 //     constructor(
 //         gerenciador: IGerenciadorPlanejamentConsulta,
 //         selecionador: ISelecionarItem
@@ -49,7 +49,5 @@
 //     verificacaoCapacidade(pedido: Pedido, codigoSetor: CODIGOSETOR): IVerificaCapacidade {
 //         return new VerificaCapabilidade(pedido.item, codigoSetor);
 //     }
-
-
 
 // }

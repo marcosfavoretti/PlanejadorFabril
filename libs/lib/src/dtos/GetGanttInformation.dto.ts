@@ -7,7 +7,7 @@ import {
   IsNumber,
   IsInt,
   ValidateIf,
-  IsDate
+  IsDate,
 } from 'class-validator';
 
 export class GanttData {
@@ -26,7 +26,9 @@ export class GanttData {
   @IsDateString()
   start: string;
 
-  @ApiPropertyOptional({ description: 'Data de término da tarefa (formato ISO)' })
+  @ApiPropertyOptional({
+    description: 'Data de término da tarefa (formato ISO)',
+  })
   @IsOptional()
   @IsDateString()
   end?: string;
@@ -46,15 +48,21 @@ export class GanttData {
     type: [String],
   })
   @IsOptional()
-  @ValidateIf(o => typeof o.dependencies === 'string' || Array.isArray(o.dependencies))
+  @ValidateIf(
+    (o) => typeof o.dependencies === 'string' || Array.isArray(o.dependencies),
+  )
   dependencies?: string | string[];
 
-  @ApiPropertyOptional({ description: 'Classe CSS customizada para estilização' })
+  @ApiPropertyOptional({
+    description: 'Classe CSS customizada para estilização',
+  })
   @IsOptional()
   @IsString()
   custom_class?: string;
 
-  @ApiPropertyOptional({ description: 'Cor principal da barra (hex ou nome CSS)' })
+  @ApiPropertyOptional({
+    description: 'Cor principal da barra (hex ou nome CSS)',
+  })
   @IsOptional()
   @IsString()
   color?: string;
@@ -80,7 +88,7 @@ export class GanttData {
   _index?: number;
 }
 
-export class GanttLegendaDto{
+export class GanttLegendaDto {
   @ApiProperty()
   @IsString()
   legenda: string;
@@ -92,13 +100,13 @@ export class GanttLegendaDto{
 export class GetGanttInformationDto {
   @ApiProperty({
     type: GanttData,
-    isArray: true
+    isArray: true,
   })
   data: GanttData[];
 
   @ApiProperty({
     type: GanttLegendaDto,
-    isArray: true
+    isArray: true,
   })
-  legenda: GanttLegendaDto[]
+  legenda: GanttLegendaDto[];
 }

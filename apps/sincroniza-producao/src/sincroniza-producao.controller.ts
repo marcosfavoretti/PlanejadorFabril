@@ -3,7 +3,9 @@ import { SincronizaProducaoService } from './sincroniza-producao.service';
 
 @Controller()
 export class SincronizaProducaoController {
-  constructor(private readonly sincronizaProducaoService: SincronizaProducaoService) {}
+  constructor(
+    private readonly sincronizaProducaoService: SincronizaProducaoService,
+  ) {}
 
   @Get()
   getHello(): string {

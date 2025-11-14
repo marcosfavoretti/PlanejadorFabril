@@ -1,23 +1,29 @@
-import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
-import { Setor } from "@libs/lib/modules/setor/@core/entities/Setor.entity";
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Item } from '@libs/lib/modules/item/@core/entities/Item.entity';
+import { Setor } from '@libs/lib/modules/setor/@core/entities/Setor.entity';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity()
 export class ItemCapabilidade {
-    @PrimaryGeneratedColumn()
-    itemDetailId: number;
+  @PrimaryGeneratedColumn()
+  itemDetailId: number;
 
-    @ManyToOne(() => Setor, {eager: true})
-    @JoinColumn({name: 'setor'})
-    setor: Setor
+  @ManyToOne(() => Setor, { eager: true })
+  @JoinColumn({ name: 'setor' })
+  setor: Setor;
 
-    @Column('int')
-    capabilidade: number;
+  @Column('int')
+  capabilidade: number;
 
-    @Column('int')
-    leadTime: number;
+  @Column('int')
+  leadTime: number;
 
-    @ManyToOne(() => Item)
-    @JoinColumn({name: 'item'})
-    item: Item;
+  @ManyToOne(() => Item)
+  @JoinColumn({ name: 'item' })
+  item: Item;
 }

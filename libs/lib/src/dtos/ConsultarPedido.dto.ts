@@ -1,12 +1,12 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsNumber, IsString } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNumber, IsString } from 'class-validator';
 
-export class ConsultartPorPedidoDto{
-    @ApiProperty()
-    @IsString()
-    fabricaId: string;
+export class ConsultartPorPedidoDto {
+  @ApiProperty()
+  @IsString()
+  fabricaId: string;
 
-    @ApiProperty()
-    @IsString()
-    pedidoId: number;
+  @ApiProperty()
+  @IsString()
+  pedidoId: number;
 }

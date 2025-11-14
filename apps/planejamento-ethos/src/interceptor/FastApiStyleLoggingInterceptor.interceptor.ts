@@ -23,7 +23,9 @@ export class FastApiStyleLoggingInterceptor implements NestInterceptor {
       tap(() => {
         const statusCode = response.statusCode;
         const duration = Date.now() - now;
-        this.logger.debug(`${IP} ${method} ${originalUrl} ${statusCode} - ${duration}ms`);
+        this.logger.debug(
+          `${IP} ${method} ${originalUrl} ${statusCode} - ${duration}ms`,
+        );
       }),
     );
   }

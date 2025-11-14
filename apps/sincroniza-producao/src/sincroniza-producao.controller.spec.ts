@@ -11,7 +11,9 @@ describe('SincronizaProducaoController', () => {
       providers: [SincronizaProducaoService],
     }).compile();
 
-    sincronizaProducaoController = app.get<SincronizaProducaoController>(SincronizaProducaoController);
+    sincronizaProducaoController = app.get<SincronizaProducaoController>(
+      SincronizaProducaoController,
+    );
   });
 
   describe('root', () => {

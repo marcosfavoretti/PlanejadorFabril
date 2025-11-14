@@ -1,4 +1,4 @@
-export enum OqColorirGantt{
-    PEDIDO = 'pedido',
-    OPERACAO = 'operacao'
+export enum OqColorirGantt {
+  PEDIDO = 'pedido',
+  OPERACAO = 'operacao',
 }

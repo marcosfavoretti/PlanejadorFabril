@@ -1,3 +1,3 @@
-export interface ISetStrategy<T>{
-    setStrategy(strategy: T):void;
+export interface ISetStrategy<T> {
+  setStrategy(strategy: T): void;
 }

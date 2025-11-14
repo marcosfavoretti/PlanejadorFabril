@@ -1,5 +1,11 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-import { Planejamento } from "./Planejamento.entity";
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { Planejamento } from './Planejamento.entity';
 
 @Entity()
 export class TabelaProducao {
@@ -10,9 +16,9 @@ export class TabelaProducao {
   // datePlanej: Date;
 
   @ManyToOne(() => Planejamento)
-  @JoinColumn({name: 'planejamentoId'})
+  @JoinColumn({ name: 'planejamentoId' })
   planejamento: Planejamento;
 
-  @Column('int', {default: 0})
+  @Column('int', { default: 0 })
   produzido: number;
 }

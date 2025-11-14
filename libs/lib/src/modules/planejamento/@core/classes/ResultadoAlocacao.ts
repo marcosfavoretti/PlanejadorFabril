@@ -1,4 +1,4 @@
-import { PlanejamentoTemporario } from "./PlanejamentoTemporario";
+import { PlanejamentoTemporario } from './PlanejamentoTemporario';
 
 export class ResultadoAlocacao {
   acumulado: PlanejamentoTemporario[];

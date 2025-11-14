@@ -1,5 +1,5 @@
-import { Email } from "../classes/Email";
+import { Email } from '../classes/Email';
 
-export interface INotificaEmail{
-    send(email: Email):Promise<void>;
+export interface INotificaEmail {
+  send(email: Email): Promise<void>;
 }

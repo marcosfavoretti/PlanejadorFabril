@@ -1,1 +1,1 @@
-export const planejamentoQueue = ('planejamento');
+export const planejamentoQueue = 'planejamento';

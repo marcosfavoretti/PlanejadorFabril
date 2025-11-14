@@ -2,24 +2,25 @@
 https://docs.nestjs.com/guards#guards
 */
 
-import { Injectable, CanActivate, ExecutionContext, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  Inject,
+} from '@nestjs/common';
 import { JwtHandler } from '../services/JwtGenerator';
 import { IUserService } from '../abstract/IUserService';
 import { UserService } from '../../infra/services/User.service';
 import { User } from '../entities/User.entity';
-import { CustomRequest } from "@libs/lib/modules/shared/@core/classes/CustomRequest";
-import { cookiesExtractor } from "@libs/lib/modules/shared/@core/utils/CookiesExtractor";
+import { CustomRequest } from '@libs/lib/modules/shared/@core/classes/CustomRequest';
+import { cookiesExtractor } from '@libs/lib/modules/shared/@core/utils/CookiesExtractor';
 
 @Injectable()
 export class JwtGuard implements CanActivate {
   private jwtHandler = new JwtHandler();
-  constructor(
-    @Inject(IUserService) private userService: UserService
-  ) { }
+  constructor(@Inject(IUserService) private userService: UserService) {}
 
-  async canActivate(
-    context: ExecutionContext,
-  ): Promise<boolean> {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     try {
       const request: CustomRequest = context.switchToHttp().getRequest();
       // Tenta pegar do cookie (withCredentials)
@@ -28,8 +29,13 @@ export class JwtGuard implements CanActivate {
 
       // Se não encontrou no cookie, tenta pegar do header Authorization (Bearer)
       if (!accessToken) {
-        const authHeader = request.headers['authorization'] || request.headers['Authorization'];
-        if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+        const authHeader =
+          request.headers['authorization'] || request.headers['Authorization'];
+        if (
+          authHeader &&
+          typeof authHeader === 'string' &&
+          authHeader.startsWith('Bearer ')
+        ) {
           accessToken = authHeader.slice(7).trim();
         }
       }
@@ -46,8 +52,7 @@ export class JwtGuard implements CanActivate {
       }
       request.user = user;
       return this.jwtHandler.checkToken(accessToken);
-    }
-    catch (error) {
+    } catch (error) {
       return false;
     }
   }

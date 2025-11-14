@@ -39,7 +39,6 @@
 //         return diasDisponiveis;
 //     }
 
-
 //     protected async alocacao(pedido: Pedido, setor: CODIGOSETOR, dias: Date[]): Promise<PlanejamentoDiario[]> {
 //         try {
 //             const mediaDia = pedido.getLote() / dias.length;

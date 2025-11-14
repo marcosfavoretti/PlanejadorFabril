@@ -1,43 +1,50 @@
-import { Entity, PrimaryColumn, OneToMany, Column } from "typeorm";
-import { CODIGOSETOR } from "../../../planejamento/@core/enum/CodigoSetor.enum";
-import { ItemCapabilidade } from "./ItemCapabilidade.entity";
+import { Entity, PrimaryColumn, OneToMany, Column } from 'typeorm';
+import { CODIGOSETOR } from '../../../planejamento/@core/enum/CodigoSetor.enum';
+import { ItemCapabilidade } from './ItemCapabilidade.entity';
 
 @Entity({ name: 'item_x_qtdsemana' })
 // @Entity()
 export class Item {
-    @PrimaryColumn()
-    Item: string;
+  @PrimaryColumn()
+  Item: string;
 
-    @Column({ nullable: true })
-    tipo_item: string;
+  @Column({ nullable: true })
+  tipo_item: string;
 
-    @OneToMany(() => ItemCapabilidade, item => item.item, { eager: true, cascade: true })
-    itemCapabilidade: ItemCapabilidade[];
+  @OneToMany(() => ItemCapabilidade, (item) => item.item, {
+    eager: true,
+    cascade: true,
+  })
+  itemCapabilidade: ItemCapabilidade[];
 
-    public getCodigo(): string {
-        return this.Item;
+  public getCodigo(): string {
+    return this.Item;
+  }
+
+  public getTipoItem(): string {
+    return this.tipo_item;
+  }
+
+  public toString(): string {
+    return this.Item;
+  }
+
+  public getLeadtime(setor: CODIGOSETOR): number {
+    const result =
+      this.itemCapabilidade.find((c) => c.setor.codigo === setor) ||
+      Error('Não foi achada a operação no item');
+    if (result instanceof Error) throw result;
+    return result.leadTime;
+  }
+
+  public capabilidade(setor: CODIGOSETOR): number {
+    const result =
+      this.itemCapabilidade.find((c) => c.setor.codigo === setor) ||
+      Error('Não foi achada a operação no item');
+    if (result instanceof Error) {
+      console.log(`Capabilidade do setor ${setor} ${this.Item}`);
+      throw result;
     }
-
-    public getTipoItem(): string {
-        return this.tipo_item;
-    }
-
-    public toString(): string {
-        return this.Item;
-    }
-
-    public getLeadtime(setor: CODIGOSETOR): number {
-        const result = this.itemCapabilidade.find((c) => c.setor.codigo === setor) || Error('Não foi achada a operação no item');
-        if (result instanceof Error) throw result;
-        return result.leadTime;
-    }
-
-    public capabilidade(setor: CODIGOSETOR): number {
-        const result = this.itemCapabilidade.find((c) => c.setor.codigo === setor) || Error('Não foi achada a operação no item');
-        if (result instanceof Error) {
-            console.log(`Capabilidade do setor ${setor} ${this.Item}`)
-            throw result;
-        };
-        return result.capabilidade;
-    }
+    return result.capabilidade;
+  }
 }

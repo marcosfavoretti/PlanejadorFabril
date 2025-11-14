@@ -1,5 +1,4 @@
-
 export enum ParamDataVirtual {
-    PROXIMA = 'proxima',
-    ANTERIOR = 'anterior',
+  PROXIMA = 'proxima',
+  ANTERIOR = 'anterior',
 }

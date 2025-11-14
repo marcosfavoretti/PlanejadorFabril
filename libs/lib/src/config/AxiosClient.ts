@@ -3,5 +3,5 @@ import { config } from 'dotenv';
 config();
 
 export const clientAxios = axios.create({
-    baseURL: process.env.ESTRUTURA_SERVICE
-})
+  baseURL: process.env.ESTRUTURA_SERVICE,
+});

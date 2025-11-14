@@ -1,17 +1,15 @@
-import { InjectDataSource } from "@nestjs/typeorm";
-import { DataSource } from "typeorm";
-import { PedidoLogixDTO } from "../../@core/classes/PedidoLogix.dto";
-import { addYears, format } from "date-fns";
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { PedidoLogixDTO } from '../../@core/classes/PedidoLogix.dto';
+import { addYears, format } from 'date-fns';
 
 export class PedidoLogixDAO {
-    constructor(
-        @InjectDataSource('SYNECO_DB') private dtMainDB: DataSource
-    ) { }
+  constructor(@InjectDataSource('SYNECO_DB') private dtMainDB: DataSource) {}
 
-    async search(dataCorte: Date): Promise<PedidoLogixDTO[]> {
-        const dataBase = format(dataCorte, 'dd/MM/yyyy');
-        const dataTeto = format(addYears(dataCorte, 1), 'dd/MM/yyyy');
-        const pedidosLogix = await this.dtMainDB.query<PedidoLogixDTO[]>(`
+  async search(dataCorte: Date): Promise<PedidoLogixDTO[]> {
+    const dataBase = format(dataCorte, 'dd/MM/yyyy');
+    const dataTeto = format(addYears(dataCorte, 1), 'dd/MM/yyyy');
+    const pedidosLogix = await this.dtMainDB.query<PedidoLogixDTO[]>(`
                 SELECT 
                     o.identificador,
                     o.codigo,
@@ -50,7 +48,6 @@ export class PedidoLogixDAO {
                  select * from itens_to_import
                 );
             `);
-        return pedidosLogix;
-    }
-
+    return pedidosLogix;
+  }
 }

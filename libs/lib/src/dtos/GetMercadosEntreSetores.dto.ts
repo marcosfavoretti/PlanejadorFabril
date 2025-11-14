@@ -1,23 +1,21 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 export class GetMercadosEntreSetoresTabelaDto {
-    @ApiProperty()
-    dia: Date;
+  @ApiProperty()
+  dia: Date;
 
-    @ApiProperty()
-    item: string;
+  @ApiProperty()
+  item: string;
 
-    @ApiProperty()
-    operacao: string;
+  @ApiProperty()
+  operacao: string;
 
-    @ApiProperty()
-    planejado: number;
+  @ApiProperty()
+  planejado: number;
 
-    @ApiProperty()
-    produzido: number;
+  @ApiProperty()
+  produzido: number;
 
-    @ApiProperty()
-    qtdmercado: number;
-
-
+  @ApiProperty()
+  qtdmercado: number;
 }

@@ -1,23 +1,27 @@
-import { CalculaDividaDoPlanejamentoProps, ICalculoDivida } from "../interfaces/ICalculoDivida";
-import { PlanejamentoTemporario } from "@libs/lib/modules/planejamento/@core/classes/PlanejamentoTemporario";
-import { Inject, Logger } from "@nestjs/common";
-import { IMontaEstrutura } from "../../../item/@core/interfaces/IMontaEstrutura.ts";
-import { DividaTemporariaBuilder } from "../builder/DividaTemporaria.builder";
-import { IConsultaRoteiro } from "../../../item/@core/interfaces/IConsultaRoteiro";
-import { DividaTemporaria } from "../classes/DividaTemporaria";
-import { SetorChainFactoryService } from "./SetorChainFactory.service";
-import { PipeSemSetorException } from "../exception/PipeSemOSetor.exception";
-
+import {
+  CalculaDividaDoPlanejamentoProps,
+  ICalculoDivida,
+} from '../interfaces/ICalculoDivida';
+import { PlanejamentoTemporario } from '@libs/lib/modules/planejamento/@core/classes/PlanejamentoTemporario';
+import { Inject, Logger } from '@nestjs/common';
+import { IMontaEstrutura } from '../../../item/@core/interfaces/IMontaEstrutura.ts';
+import { DividaTemporariaBuilder } from '../builder/DividaTemporaria.builder';
+import { IConsultaRoteiro } from '../../../item/@core/interfaces/IConsultaRoteiro';
+import { DividaTemporaria } from '../classes/DividaTemporaria';
+import { SetorChainFactoryService } from './SetorChainFactory.service';
+import { PipeSemSetorException } from '../exception/PipeSemOSetor.exception';
 
 export class CalculaDividaDoPlanejamento implements ICalculoDivida {
-
   constructor(
     @Inject(IMontaEstrutura) private montaEstrutura: IMontaEstrutura,
     @Inject(IConsultaRoteiro) private consultarRoteiro: IConsultaRoteiro,
-    @Inject(SetorChainFactoryService) private setorChainFactoryService: SetorChainFactoryService
-  ) { }
+    @Inject(SetorChainFactoryService)
+    private setorChainFactoryService: SetorChainFactoryService,
+  ) {}
 
-  async calc(props: CalculaDividaDoPlanejamentoProps): Promise<DividaTemporaria[]> {
+  async calc(
+    props: CalculaDividaDoPlanejamentoProps,
+  ): Promise<DividaTemporaria[]> {
     const dividas: DividaTemporaria[] = [];
 
     /**
@@ -29,18 +33,20 @@ export class CalculaDividaDoPlanejamento implements ICalculoDivida {
       if (!itemMap.has(itemCodigo)) itemMap.set(itemCodigo, []);
       itemMap.get(itemCodigo)!.push(plan);
     }
-    
+
     /**
      * monta a estrutura do produto
      */
-    const itemEstrutura = await this.montaEstrutura.monteEstrutura(props.pedido.item);
+    const itemEstrutura = await this.montaEstrutura.monteEstrutura(
+      props.pedido.item,
+    );
     const itemAsList = itemEstrutura.itensAsList();
-  
+
     /**
      * consulta os roteiros dos itens
      */
     const roteirosPorItem = await Promise.all(
-      itemAsList.map(i => this.consultarRoteiro.roteiro(i))
+      itemAsList.map((i) => this.consultarRoteiro.roteiro(i)),
     );
 
     /**
@@ -58,13 +64,21 @@ export class CalculaDividaDoPlanejamento implements ICalculoDivida {
         try {
           // Filtra planejamentos que pertencem ao roteiro atual
           const planejamentosSetor = planejamentos.filter(
-            plan => plan.setor === roteiro
+            (plan) => plan.setor === roteiro,
           );
-          const totalPlanejado = planejamentosSetor.reduce((sum, plan) => sum + plan.qtd, 0);
+          const totalPlanejado = planejamentosSetor.reduce(
+            (sum, plan) => sum + plan.qtd,
+            0,
+          );
           const totalPlanejadoIdeal = props.pedido.lote;
 
-          Logger.warn(totalPlanejadoIdeal +'-------------'+ totalPlanejado+'-----'+roteiro)
-
+          Logger.warn(
+            totalPlanejadoIdeal +
+              '-------------' +
+              totalPlanejado +
+              '-----' +
+              roteiro,
+          );
 
           //isso serve para ver se o setor da estrutura esta sendo mapeado nesse programa de estrutura
           //por exemplo. Solda Robo, nao esta, logo ela nao deve ser contabilizado
@@ -72,17 +86,16 @@ export class CalculaDividaDoPlanejamento implements ICalculoDivida {
 
           const resultado = totalPlanejadoIdeal - totalPlanejado;
 
-          (resultado !== 0) &&
+          resultado !== 0 &&
             dividas.push(
               new DividaTemporariaBuilder()
                 .item(targetItem)
                 .pedido(props.pedido)
                 .qtd(resultado)
                 .setor(roteiro)
-                .build()
+                .build(),
             );
-        }
-        catch (error) {
+        } catch (error) {
           if (error instanceof PipeSemSetorException) continue;
           console.error(error);
           throw error;

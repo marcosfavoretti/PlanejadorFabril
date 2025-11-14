@@ -1,13 +1,13 @@
 export class FabricaJsonPlanejamento {
-    planejamentoId: number;
+  planejamentoId: number;
 
-    item: string;
+  item: string;
 
-    setor: string;
+  setor: string;
 
-    pedido: string;
+  pedido: string;
 
-    dia: Date;
+  dia: Date;
 
-    qtd: number;
+  qtd: number;
 }

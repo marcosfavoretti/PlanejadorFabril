@@ -1,1 +1,1 @@
-export class ConsultarPlanejamentoPorPedidoUseCase{}
+export class ConsultarPlanejamentoPorPedidoUseCase {}

@@ -2,24 +2,25 @@
 https://docs.nestjs.com/guards#guards
 */
 
-import { Injectable, CanActivate, ExecutionContext, Inject } from '@nestjs/common';
-import { IUserService } from "@libs/lib/modules/user/@core/abstract/IUserService";
-import { JwtHandler } from "@libs/lib/modules/user/@core/services/JwtGenerator";
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  Inject,
+} from '@nestjs/common';
+import { IUserService } from '@libs/lib/modules/user/@core/abstract/IUserService';
+import { JwtHandler } from '@libs/lib/modules/user/@core/services/JwtGenerator';
 import { CustomRequest } from '../classes/CustomRequest';
 import { cookiesExtractor } from '../utils/CookiesExtractor';
-import { User } from "@libs/lib/modules/user/@core/entities/User.entity";
-import { UserService } from "@libs/lib/modules/user/infra/services/User.service";
+import { User } from '@libs/lib/modules/user/@core/entities/User.entity';
+import { UserService } from '@libs/lib/modules/user/infra/services/User.service';
 
 @Injectable()
 export class JwtGuard implements CanActivate {
   private jwtHandler = new JwtHandler();
-  constructor(
-    @Inject(IUserService) private userService: UserService
-  ) { }
+  constructor(@Inject(IUserService) private userService: UserService) {}
 
-  async canActivate(
-    context: ExecutionContext,
-  ): Promise<boolean> {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     try {
       const request: CustomRequest = context.switchToHttp().getRequest();
       const cookies = cookiesExtractor(request);
@@ -34,8 +35,7 @@ export class JwtGuard implements CanActivate {
       }
       request.user = user;
       return this.jwtHandler.checkToken(accessToken);
-    }
-    catch (error) {
+    } catch (error) {
       return false;
     }
   }

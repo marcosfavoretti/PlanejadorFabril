@@ -1,8 +1,16 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, Column, OneToMany, JoinColumn, CreateDateColumn } from "typeorm";
-import { Pedido } from "../../../pedido/@core/entities/Pedido.entity";
-import { Setor } from "@libs/lib/modules/setor/@core/entities/Setor.entity";
-import { PlanejamentoSnapShot } from "@libs/lib/modules/fabrica/@core/entities/PlanejamentoSnapShot.entity";
-import { Item } from "@libs/lib/modules/item/@core/entities/Item.entity";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  Column,
+  OneToMany,
+  JoinColumn,
+  CreateDateColumn,
+} from 'typeorm';
+import { Pedido } from '../../../pedido/@core/entities/Pedido.entity';
+import { Setor } from '@libs/lib/modules/setor/@core/entities/Setor.entity';
+import { PlanejamentoSnapShot } from '@libs/lib/modules/fabrica/@core/entities/PlanejamentoSnapShot.entity';
+import { Item } from '@libs/lib/modules/item/@core/entities/Item.entity';
 
 @Entity()
 export class Planejamento {
@@ -36,7 +44,9 @@ export class Planejamento {
   @CreateDateColumn()
   dia: Date;
 
-  @OneToMany(() => PlanejamentoSnapShot, plan => plan.planejamento, {onDelete: 'CASCADE'})
+  @OneToMany(() => PlanejamentoSnapShot, (plan) => plan.planejamento, {
+    onDelete: 'CASCADE',
+  })
   planejamentoSnapShot: PlanejamentoSnapShot[];
 
   @Column('int')

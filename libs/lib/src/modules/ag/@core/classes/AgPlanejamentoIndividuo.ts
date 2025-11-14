@@ -1,3 +1,1 @@
-export class AgPlanejamentoIndividuo{
-    
-}
+export class AgPlanejamentoIndividuo {}

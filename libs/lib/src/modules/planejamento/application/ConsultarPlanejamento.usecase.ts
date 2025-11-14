@@ -1,6 +1,4 @@
-
-export class ConsultarPlanejamentoUseCase{
-    // consulta():Promise<GetPlanejamentoDiaDTO[]>{
-    
-    // }   
+export class ConsultarPlanejamentoUseCase {
+  // consulta():Promise<GetPlanejamentoDiaDTO[]>{
+  // }
 }

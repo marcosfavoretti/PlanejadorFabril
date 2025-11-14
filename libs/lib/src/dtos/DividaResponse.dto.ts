@@ -1,18 +1,18 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
 export class DividaResponseDTO {
-    @ApiProperty()
-    dividaId:number;
+  @ApiProperty()
+  dividaId: number;
 
-    @ApiProperty()
-    qtd: number;
+  @ApiProperty()
+  qtd: number;
 
-    @ApiProperty()
-    pedidoId: number;
+  @ApiProperty()
+  pedidoId: number;
 
-    @ApiProperty()
-    setorCodigo: string;
+  @ApiProperty()
+  setorCodigo: string;
 
-    @ApiProperty()
-    createdAt: Date;
+  @ApiProperty()
+  createdAt: Date;
 }
